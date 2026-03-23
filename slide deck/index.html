@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta
+			name="viewport"
+			content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+		/>
+
+		<title>Slide Deck</title>
+
+		<link rel="stylesheet" href="../dist/reset.css" />
+		<link rel="stylesheet" href="../dist/reveal.css" />
+		<link rel="stylesheet" href="../dist/theme/black.css" />
+
+		<style>
+			:root {
+				--r-link-color: #ffffff;
+			}
+
+			html,
+			body {
+				width: 100%;
+				height: 100%;
+				margin: 0;
+				background: #000;
+			}
+
+			.reveal {
+				width: 100%;
+				height: 100%;
+			}
+
+			.reveal .slides {
+				width: 100%;
+				height: 100%;
+			}
+
+			.reveal .slides section {
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				background: #000;
+			}
+
+			.reveal img,
+			.reveal video,
+			.reveal iframe {
+				max-width: none;
+				max-height: none;
+				margin: 0;
+			}
+
+			.slide-image {
+				display: block;
+				width: 100%;
+				height: 100%;
+				border: 0;
+				box-shadow: none;
+				object-fit: contain;
+				background: #000;
+			}
+
+			@keyframes bump-left {
+				0%,
+				100% {
+					transform: none;
+				}
+				50% {
+					transform: translateX(-4px);
+				}
+			}
+
+			@keyframes bump-right {
+				0%,
+				100% {
+					transform: none;
+				}
+				50% {
+					transform: translateX(4px);
+				}
+			}
+
+			@keyframes bump-up {
+				0%,
+				100% {
+					transform: none;
+				}
+				50% {
+					transform: translateY(-4px);
+				}
+			}
+
+			@keyframes bump-down {
+				0%,
+				100% {
+					transform: none;
+				}
+				50% {
+					transform: translateY(4px);
+				}
+			}
+
+			.reveal .controls .navigate-left.bump {
+				animation: bump-left 180ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+			}
+
+			.reveal .controls .navigate-right.bump {
+				animation: bump-right 180ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+			}
+
+			.reveal .controls .navigate-up.bump {
+				animation: bump-up 180ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+			}
+
+			.reveal .controls .navigate-down.bump {
+				animation: bump-down 180ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+			}
+
+			.reveal .controls .navigate-left,
+			.reveal .controls .navigate-right,
+			.reveal .controls .navigate-up,
+			.reveal .controls .navigate-down {
+				transform: none;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="reveal">
+			<div class="slides" id="slides"></div>
+		</div>
+
+		<script src="../dist/reveal.js"></script>
+		<script src="../dist/plugin/notes.js"></script>
+		<script src="../dist/plugin/markdown.js"></script>
+		<script src="../dist/plugin/highlight.js"></script>
+		<script>
+			const slidesRoot = document.getElementById('slides');
+			const slideCount = 62;
+			const assetPath = (index) => encodeURI(`source pngs/${index}.png`);
+			const controlsRoot = () => document.querySelector('.reveal .controls');
+
+			function bumpControl(direction) {
+				const control = controlsRoot()?.querySelector(`.navigate-${direction}`);
+				if (!control) {
+					return;
+				}
+
+				control.classList.remove('bump');
+				void control.offsetWidth;
+				control.classList.add('bump');
+			}
+
+			function getNavigationDirection(previousSlide, currentSlide) {
+				if (!previousSlide || !currentSlide) {
+					return null;
+				}
+
+				const previous = Reveal.getIndices(previousSlide);
+				const current = Reveal.getIndices(currentSlide);
+
+				if (current.h !== previous.h) {
+					return current.h > previous.h ? 'right' : 'left';
+				}
+
+				if (current.v !== previous.v) {
+					return current.v > previous.v ? 'down' : 'up';
+				}
+
+				return null;
+			}
+
+			for (let index = 1; index <= slideCount; index += 1) {
+				const section = document.createElement('section');
+				const image = document.createElement('img');
+
+				image.className = 'slide-image';
+				image.loading = 'lazy';
+				image.decoding = 'async';
+				image.src = assetPath(index);
+				image.alt = `Slide ${index}`;
+
+				section.appendChild(image);
+				slidesRoot.appendChild(section);
+			}
+
+			Reveal.initialize({
+				hash: true,
+				controls: true,
+				progress: true,
+				center: true,
+				transition: 'fade',
+				transitionSpeed: 'fast',
+				plugins: [RevealMarkdown, RevealHighlight, RevealNotes],
+			});
+
+			Reveal.on('slidechanged', (event) => {
+				const direction = getNavigationDirection(event.previousSlide, event.currentSlide);
+				if (direction) {
+					bumpControl(direction);
+				}
+			});
+		</script>
+	</body>
+</html>
