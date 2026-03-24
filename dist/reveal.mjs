@@ -1692,7 +1692,7 @@ class Wi {
    */
   activate() {
     if (this.Reveal.getConfig().overview && !this.Reveal.isScrollView() && !this.isActive()) {
-      this.active = !0, this.Reveal.getRevealElement().classList.add("overview"), this.Reveal.cancelAutoSlide(), this.Reveal.getSlidesElement().appendChild(this.Reveal.getBackgroundsElement()), S(this.Reveal.getRevealElement(), de).forEach((X) => {
+      this.active = !0, this.Reveal.getRevealElement().classList.add("overview"), this.Reveal.getRevealElement().classList.add("overview-activating"), this.Reveal.cancelAutoSlide(), this.Reveal.getSlidesElement().appendChild(this.Reveal.getBackgroundsElement()), S(this.Reveal.getRevealElement(), de).forEach((X) => {
         X.classList.contains("stack") || X.addEventListener("click", this.onSlideClicked, !0);
       });
       const e = 70, i = this.Reveal.getComputedSlideSize(), t = e * 2, a = i.height + 0;
@@ -1702,38 +1702,7 @@ class Wi {
         "translateX(" + -this.Reveal.getIndices().h * this.overviewSlideWidth + "px)",
         "translateY(" + -this.Reveal.getIndices().v * this.overviewSlideHeight + "px)"
       ].join(" ");
-      console.log("[reveal overview] activate diagnostics", {
-        revealRect: p,
-        slidesRect: y,
-        backgroundsRect: b,
-        currentSlideRect: g,
-        slidesTransform: l.transform,
-        slidesTransformOrigin: l.transformOrigin,
-        slidesTransition: l.transition,
-        backgroundsTransform: E.transform,
-        backgroundsTransformOrigin: E.transformOrigin,
-        backgroundsTransition: E.transition,
-        computedScale: I,
-        targetTransform: O,
-        slidesInlineStyle: o.getAttribute("style"),
-        backgroundsInlineStyle: c.getAttribute("style"),
-        currentSlideInlineStyle: u ? u.getAttribute("style") : null,
-        activeIndices: this.Reveal.getIndices(),
-        currentSlideTag: u ? u.nodeName : null,
-        currentSlideClasses: u ? u.className : null,
-        currentSlideSize: g ? {
-          width: g.width,
-          height: g.height
-        } : null,
-        currentSlideCenter: g ? {
-          x: g.left + g.width / 2,
-          y: g.top + g.height / 2
-        } : null,
-        viewportCenter: {
-          x: window.innerWidth / 2,
-          y: window.innerHeight / 2
-        }
-      }), this.Reveal.getConfig().rtl && (this.overviewSlideWidth = -this.overviewSlideWidth), this.Reveal.updateSlidesVisibility(), this.layout(), this.update(), this.Reveal.layout();
+      this.Reveal.getConfig().rtl && (this.overviewSlideWidth = -this.overviewSlideWidth), this.Reveal.updateSlidesVisibility(), this.layout(), this.update(), this.Reveal.layout();
       const V = this.Reveal.getIndices();
       this.Reveal.dispatchEvent({
         type: "overviewshown",
@@ -1742,6 +1711,10 @@ class Wi {
           indexv: V.v,
           currentSlide: this.Reveal.getCurrentSlide()
         }
+      }), requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          this.Reveal.getRevealElement().classList.remove("overview-activating");
+        });
       });
     }
   }
@@ -1770,33 +1743,9 @@ class Wi {
       "translateX(" + -t.h * this.overviewSlideWidth + "px)",
       "translateY(" + -t.v * this.overviewSlideHeight + "px)"
     ].join(" ");
-    console.log("[reveal overview] update diagnostics", {
-      indices: t,
-      scale: i,
-      targetTransform: s,
-      slidesTransformBefore: window.getComputedStyle(this.Reveal.getSlidesElement()).transform,
-      slidesTransformOriginBefore: window.getComputedStyle(this.Reveal.getSlidesElement()).transformOrigin,
-      slidesInlineStyleBefore: this.Reveal.getSlidesElement().getAttribute("style"),
-      currentSlide: this.Reveal.getCurrentSlide() ? {
-        tag: this.Reveal.getCurrentSlide().nodeName,
-        classes: this.Reveal.getCurrentSlide().className,
-        inlineStyle: this.Reveal.getCurrentSlide().getAttribute("style"),
-        rect: this.Reveal.getCurrentSlide().getBoundingClientRect()
-      } : null
-    }), this.Reveal.transformSlides({
+    this.Reveal.transformSlides({
       overview: s
     }), requestAnimationFrame(() => {
-      console.log("[reveal overview] update applied", {
-        slidesTransformAfter: window.getComputedStyle(this.Reveal.getSlidesElement()).transform,
-        slidesTransformOriginAfter: window.getComputedStyle(this.Reveal.getSlidesElement()).transformOrigin,
-        slidesInlineStyleAfter: this.Reveal.getSlidesElement().getAttribute("style"),
-        currentSlideAfter: this.Reveal.getCurrentSlide() ? {
-          tag: this.Reveal.getCurrentSlide().nodeName,
-          classes: this.Reveal.getCurrentSlide().className,
-          inlineStyle: this.Reveal.getCurrentSlide().getAttribute("style"),
-          rect: this.Reveal.getCurrentSlide().getBoundingClientRect()
-        } : null
-      });
     });
   }
   /**

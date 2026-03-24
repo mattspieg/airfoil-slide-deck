@@ -29,6 +29,7 @@ export default class Overview {
 			this.active = true;
 
 			this.Reveal.getRevealElement().classList.add( 'overview' );
+			this.Reveal.getRevealElement().classList.add( 'overview-activating' );
 
 			// Don't auto-slide while in overview mode
 			this.Reveal.cancelAutoSlide();
@@ -70,39 +71,6 @@ export default class Overview {
 				'translateY(' + ( -this.Reveal.getIndices().v * this.overviewSlideHeight ) + 'px)'
 			].join( ' ' );
 
-			console.log( '[reveal overview] activate diagnostics', {
-				revealRect,
-				slidesRect,
-				backgroundsRect,
-				currentSlideRect,
-				slidesTransform: slidesStyle.transform,
-				slidesTransformOrigin: slidesStyle.transformOrigin,
-				slidesTransition: slidesStyle.transition,
-				backgroundsTransform: backgroundsStyle.transform,
-				backgroundsTransformOrigin: backgroundsStyle.transformOrigin,
-				backgroundsTransition: backgroundsStyle.transition,
-				computedScale,
-				targetTransform,
-				slidesInlineStyle: slidesElement.getAttribute( 'style' ),
-				backgroundsInlineStyle: backgroundsElement.getAttribute( 'style' ),
-				currentSlideInlineStyle: currentSlide ? currentSlide.getAttribute( 'style' ) : null,
-				activeIndices: this.Reveal.getIndices(),
-				currentSlideTag: currentSlide ? currentSlide.nodeName : null,
-				currentSlideClasses: currentSlide ? currentSlide.className : null,
-				currentSlideSize: currentSlideRect ? {
-					width: currentSlideRect.width,
-					height: currentSlideRect.height
-				} : null,
-				currentSlideCenter: currentSlideRect ? {
-					x: currentSlideRect.left + ( currentSlideRect.width / 2 ),
-					y: currentSlideRect.top + ( currentSlideRect.height / 2 )
-				} : null,
-				viewportCenter: {
-					x: window.innerWidth / 2,
-					y: window.innerHeight / 2
-				}
-			} );
-
 			// Reverse in RTL mode
 			if( this.Reveal.getConfig().rtl ) {
 				this.overviewSlideWidth = -this.overviewSlideWidth;
@@ -126,6 +94,12 @@ export default class Overview {
 					'currentSlide': this.Reveal.getCurrentSlide()
 				}
 			});
+
+			requestAnimationFrame( () => {
+				requestAnimationFrame( () => {
+					this.Reveal.getRevealElement().classList.remove( 'overview-activating' );
+				} );
+			} );
 
 		}
 
@@ -180,37 +154,11 @@ export default class Overview {
 			'translateY(' + ( -indices.v * this.overviewSlideHeight ) + 'px)'
 		].join( ' ' );
 
-		console.log( '[reveal overview] update diagnostics', {
-			indices,
-			scale,
-			targetTransform,
-			slidesTransformBefore: window.getComputedStyle( this.Reveal.getSlidesElement() ).transform,
-			slidesTransformOriginBefore: window.getComputedStyle( this.Reveal.getSlidesElement() ).transformOrigin,
-			slidesInlineStyleBefore: this.Reveal.getSlidesElement().getAttribute( 'style' ),
-			currentSlide: this.Reveal.getCurrentSlide() ? {
-				tag: this.Reveal.getCurrentSlide().nodeName,
-				classes: this.Reveal.getCurrentSlide().className,
-				inlineStyle: this.Reveal.getCurrentSlide().getAttribute( 'style' ),
-				rect: this.Reveal.getCurrentSlide().getBoundingClientRect()
-			} : null
-		} );
-
 		this.Reveal.transformSlides( {
 			overview: targetTransform
 		} );
 
 		requestAnimationFrame( () => {
-			console.log( '[reveal overview] update applied', {
-				slidesTransformAfter: window.getComputedStyle( this.Reveal.getSlidesElement() ).transform,
-				slidesTransformOriginAfter: window.getComputedStyle( this.Reveal.getSlidesElement() ).transformOrigin,
-				slidesInlineStyleAfter: this.Reveal.getSlidesElement().getAttribute( 'style' ),
-				currentSlideAfter: this.Reveal.getCurrentSlide() ? {
-					tag: this.Reveal.getCurrentSlide().nodeName,
-					classes: this.Reveal.getCurrentSlide().className,
-					inlineStyle: this.Reveal.getCurrentSlide().getAttribute( 'style' ),
-					rect: this.Reveal.getCurrentSlide().getBoundingClientRect()
-				} : null
-			} );
 		} );
 
 	}

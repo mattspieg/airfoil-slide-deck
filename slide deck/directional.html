@@ -37,20 +37,29 @@
 				aspect-ratio: 16 / 9;
 			}
 
-			.reveal.overview .slides {
+			.reveal.overview:not(.overview-activating) .slides {
 				transition: transform 260ms cubic-bezier(0.22, 0.61, 0.36, 1);
 				will-change: transform;
 			}
 
-			.reveal.overview .backgrounds {
+			.reveal.overview:not(.overview-activating) .backgrounds {
 				transition: transform 260ms cubic-bezier(0.22, 0.61, 0.36, 1);
 				will-change: transform;
+			}
+
+			.reveal.overview:not(.overview-activating) .slides section,
+			.reveal.overview:not(.overview-activating) .backgrounds .slide-background {
+				transition:
+					transform 260ms cubic-bezier(0.22, 0.61, 0.36, 1),
+					outline-color 180ms ease,
+					outline-offset 180ms ease,
+					opacity 180ms ease,
+					box-shadow 180ms ease;
 			}
 
 			.reveal.overview .slides section,
 			.reveal.overview .backgrounds .slide-background {
 				transition:
-					transform 260ms cubic-bezier(0.22, 0.61, 0.36, 1),
 					outline-color 180ms ease,
 					outline-offset 180ms ease,
 					opacity 180ms ease,
@@ -229,109 +238,6 @@
 			const helperTip = document.getElementById('helper-tip');
 			const helperIconColor = 'white';
 
-			function logOverviewMetrics(stage, extra = {}) {
-				const revealElement = Reveal.getRevealElement();
-				const slidesElement = Reveal.getSlidesElement();
-				const backgroundsElement = Reveal.getBackgroundsElement();
-				const currentSlide = Reveal.getCurrentSlide();
-				const currentSlideRect = currentSlide ? currentSlide.getBoundingClientRect() : null;
-				const slidesRect = slidesElement.getBoundingClientRect();
-				const backgroundsRect = backgroundsElement.getBoundingClientRect();
-				const slidesStyle = window.getComputedStyle(slidesElement);
-				const backgroundsStyle = window.getComputedStyle(backgroundsElement);
-				const currentSlideStyle = currentSlide ? window.getComputedStyle(currentSlide) : null;
-				const slidesMatrix = new DOMMatrixReadOnly(slidesStyle.transform === 'none' ? undefined : slidesStyle.transform);
-				const backgroundsMatrix = new DOMMatrixReadOnly(backgroundsStyle.transform === 'none' ? undefined : backgroundsStyle.transform);
-				const rectToObject = (rect) => rect
-					? {
-							x: rect.x,
-							y: rect.y,
-							left: rect.left,
-							top: rect.top,
-							right: rect.right,
-							bottom: rect.bottom,
-							width: rect.width,
-							height: rect.height
-						}
-					: null;
-
-				console.log(stage, {
-					activeIndices: Reveal.getIndices(),
-					revealClasses: revealElement.className,
-					revealRect: rectToObject(revealElement.getBoundingClientRect()),
-					slidesRect: rectToObject(slidesRect),
-					backgroundsRect: rectToObject(backgroundsRect),
-					currentSlideRect: rectToObject(currentSlideRect),
-					slidesTransform: slidesStyle.transform,
-					slidesTransformOrigin: slidesStyle.transformOrigin,
-					slidesTransition: slidesStyle.transition,
-					backgroundsTransform: backgroundsStyle.transform,
-					backgroundsTransformOrigin: backgroundsStyle.transformOrigin,
-					backgroundsTransition: backgroundsStyle.transition,
-					backgroundsPerspective: backgroundsStyle.perspective,
-					backgroundsPerspectiveOrigin: backgroundsStyle.perspectiveOrigin,
-					slidesMatrix: {
-						a: slidesMatrix.a,
-						d: slidesMatrix.d,
-						e: slidesMatrix.e,
-						f: slidesMatrix.f
-					},
-					backgroundsMatrix: {
-						a: backgroundsMatrix.a,
-						d: backgroundsMatrix.d,
-						e: backgroundsMatrix.e,
-						f: backgroundsMatrix.f
-					},
-					slidesInlineStyle: slidesElement.getAttribute('style'),
-					backgroundsInlineStyle: backgroundsElement.getAttribute('style'),
-					currentSlideInlineStyle: currentSlide ? currentSlide.getAttribute('style') : null,
-					currentSlideClasses: currentSlide ? currentSlide.className : null,
-					currentSlideTransform: currentSlideStyle ? currentSlideStyle.transform : null,
-					currentSlideTransformOrigin: currentSlideStyle ? currentSlideStyle.transformOrigin : null,
-					currentSlideIndex: currentSlide
-						? {
-								h: currentSlide.getAttribute('data-index-h'),
-								v: currentSlide.getAttribute('data-index-v')
-							}
-						: null,
-					currentSlideCenter: currentSlideRect
-						? {
-								x: currentSlideRect.left + currentSlideRect.width / 2,
-								y: currentSlideRect.top + currentSlideRect.height / 2
-							}
-						: null,
-					currentSlideSize: currentSlideRect
-						? {
-								width: currentSlideRect.width,
-								height: currentSlideRect.height
-							}
-						: null,
-					currentSlideRectTopLeft: currentSlideRect
-						? {
-								x: currentSlideRect.left,
-								y: currentSlideRect.top
-							}
-						: null,
-					viewportCenter: {
-						x: window.innerWidth / 2,
-						y: window.innerHeight / 2
-					},
-					innerSize: {
-						width: window.innerWidth,
-						height: window.innerHeight
-					},
-					slidesBoxMetrics: {
-						offsetLeft: slidesElement.offsetLeft,
-						offsetTop: slidesElement.offsetTop,
-						offsetWidth: slidesElement.offsetWidth,
-						offsetHeight: slidesElement.offsetHeight,
-						clientWidth: slidesElement.clientWidth,
-						clientHeight: slidesElement.clientHeight
-					},
-					...extra
-				});
-			}
-
 			const downTipIcon = `
 				<span class="helper-tip__icon" aria-hidden="true">
 					<svg width="200" height="208" viewBox="0 0 200 208" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -452,23 +358,6 @@
 			Reveal.on('ready', updateHelperTip);
 			Reveal.on('overviewshown', updateHelperTip);
 			Reveal.on('overviewhidden', updateHelperTip);
-			Reveal.on('overviewshown', () => {
-				logOverviewMetrics('[reveal overview] shown immediate');
-				requestAnimationFrame(() => {
-					logOverviewMetrics('[reveal overview] shown frame 1');
-					requestAnimationFrame(() => {
-						logOverviewMetrics('[reveal overview] shown frame 2');
-						requestAnimationFrame(() => {
-							logOverviewMetrics('[reveal overview] shown frame 3');
-						});
-					});
-				});
-			});
-			Reveal.on('slidechanged', () => {
-				if (Reveal.getRevealElement().classList.contains('overview')) {
-					logOverviewMetrics('[reveal overview] slidechanged in overview');
-				}
-			});
 			Reveal.on('slidechanged', (event) => {
 				const direction = getNavigationDirection(event.previousSlide, event.currentSlide);
 				if (direction) {
