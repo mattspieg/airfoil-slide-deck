@@ -55,6 +55,12 @@
 				transition: none;
 			}
 
+			body.is-click-zoom .deck-frame {
+				transition:
+					opacity 1120ms cubic-bezier(0.22, 0.61, 0.36, 1),
+					transform 1120ms cubic-bezier(0, .325, .288, 1.017);
+			}
+
 			body:not(.ready) .deck-frame {
 				opacity: 0;
 			}
@@ -153,6 +159,19 @@
 				syncing: false,
 				pinchGestureScale: 1,
 				pinchSnapTimer: null,
+				wheelNavigation: {
+					accumulatedX: 0,
+					accumulatedY: 0,
+					hasNavigated: false,
+					axis: null,
+					direction: 0,
+					lastEventAt: 0,
+					lastDominantMagnitude: 0,
+					smoothedSpeed: 0,
+					minSinceNavigate: Infinity,
+					resetTimer: null,
+				},
+				clickZoomTimer: null,
 			};
 
 			const scales = {
@@ -161,6 +180,7 @@
 				overviewActive: 1,
 				overviewInactive: 5,
 			};
+			const clickZoomDuration = 1120;
 
 			function clamp(value, min, max) {
 				return Math.min(max, Math.max(min, value));
@@ -172,11 +192,14 @@
 
 			function applyTransitionProgress(progress) {
 				state.transitionProgress = clamp(progress, 0, 1);
+				const isClickZoomToNormal = document.body.classList.contains('is-click-zoom') && state.activeMode === 'normal';
 
 				const normalOpacity = 1 - state.transitionProgress;
 				const overviewOpacity = state.transitionProgress;
 				const normalScale = lerp(scales.normalActive, scales.normalInactive, state.transitionProgress);
-				const overviewScale = lerp(scales.overviewInactive, scales.overviewActive, state.transitionProgress);
+				const overviewScale = isClickZoomToNormal
+					? scales.overviewActive
+					: lerp(scales.overviewInactive, scales.overviewActive, state.transitionProgress);
 
 				normalFrame.style.opacity = normalOpacity.toFixed(4);
 				normalFrame.style.transform = `scale(${normalScale})`;
@@ -185,6 +208,29 @@
 
 				normalFrame.style.pointerEvents = state.transitionProgress < 0.5 ? 'auto' : 'none';
 				overviewFrame.style.pointerEvents = state.transitionProgress >= 0.5 ? 'auto' : 'none';
+			}
+
+			function setFrameOrigins(origin) {
+				normalFrame.style.transformOrigin = '50% 50%';
+				overviewFrame.style.transformOrigin = '50% 50%';
+			}
+
+			function clearClickZoomTimer() {
+				if (state.clickZoomTimer) {
+					clearTimeout(state.clickZoomTimer);
+					state.clickZoomTimer = null;
+				}
+			}
+
+			function startClickZoom() {
+				clearClickZoomTimer();
+				setFrameOrigins(null);
+				document.body.classList.add('is-click-zoom');
+				state.clickZoomTimer = setTimeout(() => {
+					document.body.classList.remove('is-click-zoom');
+					setFrameOrigins(null);
+					state.clickZoomTimer = null;
+				}, clickZoomDuration);
 			}
 
 			function clearPinchSnapTimer() {
@@ -212,6 +258,129 @@
 				schedulePinchSnap();
 			}
 
+			function navigateActiveDeck(direction) {
+				const deck = getDeck(state.activeMode);
+				if (!deck) {
+					return;
+				}
+
+				if (direction === 'left') {
+					deck.left();
+				}
+				else if (direction === 'right') {
+					deck.right();
+				}
+				else if (direction === 'up') {
+					deck.up();
+				}
+				else if (direction === 'down') {
+					deck.down();
+				}
+			}
+
+			function clearWheelNavigationResetTimer() {
+				if (state.wheelNavigation.resetTimer) {
+					clearTimeout(state.wheelNavigation.resetTimer);
+					state.wheelNavigation.resetTimer = null;
+				}
+			}
+
+			function scheduleWheelNavigationReset(delay = 95) {
+				clearWheelNavigationResetTimer();
+				state.wheelNavigation.resetTimer = setTimeout(() => {
+					state.wheelNavigation.accumulatedX = 0;
+					state.wheelNavigation.accumulatedY = 0;
+					state.wheelNavigation.hasNavigated = false;
+					state.wheelNavigation.axis = null;
+					state.wheelNavigation.direction = 0;
+					state.wheelNavigation.lastEventAt = 0;
+					state.wheelNavigation.lastDominantMagnitude = 0;
+					state.wheelNavigation.smoothedSpeed = 0;
+					state.wheelNavigation.minSinceNavigate = Infinity;
+					state.wheelNavigation.resetTimer = null;
+				}, delay);
+			}
+
+			function queueWheelNavigation(deltaX, deltaY) {
+				const isNormalMode = state.activeMode === 'normal';
+				const wheelNavigationThreshold = 260;
+				const wheelNavigationGestureIdle = isNormalMode ? 150 : 115;
+				const wheelNavigationResetDelay = isNormalMode ? 150 : 95;
+				const wheelNavigationSmoothing = 0.3;
+				const wheelNavigationRearmDelta = 12;
+				const wheelNavigationMinGestureSpeed = 18;
+				const now = Date.now();
+				const absX = Math.abs(deltaX);
+				const absY = Math.abs(deltaY);
+				const nextAxis = absX >= absY ? 'x' : 'y';
+				const dominantMagnitude = nextAxis === 'x' ? absX : absY;
+				const nextDirection = nextAxis === 'x' ? Math.sign(deltaX) : Math.sign(deltaY);
+				const speed = (state.wheelNavigation.smoothedSpeed * (1 - wheelNavigationSmoothing)) + (dominantMagnitude * wheelNavigationSmoothing);
+
+				if (now - state.wheelNavigation.lastEventAt > wheelNavigationGestureIdle) {
+					state.wheelNavigation.accumulatedX = 0;
+					state.wheelNavigation.accumulatedY = 0;
+					state.wheelNavigation.hasNavigated = false;
+					state.wheelNavigation.axis = null;
+					state.wheelNavigation.direction = 0;
+				}
+
+				state.wheelNavigation.lastEventAt = now;
+				state.wheelNavigation.lastDominantMagnitude = dominantMagnitude;
+				state.wheelNavigation.smoothedSpeed = speed;
+				scheduleWheelNavigationReset(wheelNavigationResetDelay);
+
+				if (state.wheelNavigation.hasNavigated) {
+					state.wheelNavigation.minSinceNavigate = Math.min(state.wheelNavigation.minSinceNavigate, speed);
+				}
+
+				if (
+					!isNormalMode &&
+					state.wheelNavigation.hasNavigated &&
+					speed >= state.wheelNavigation.minSinceNavigate + wheelNavigationRearmDelta &&
+					dominantMagnitude >= wheelNavigationMinGestureSpeed
+				) {
+					state.wheelNavigation.accumulatedX = 0;
+					state.wheelNavigation.accumulatedY = 0;
+					state.wheelNavigation.hasNavigated = false;
+					state.wheelNavigation.axis = null;
+					state.wheelNavigation.direction = 0;
+					state.wheelNavigation.minSinceNavigate = Infinity;
+				}
+
+				if (state.wheelNavigation.hasNavigated) {
+					return;
+				}
+
+				state.wheelNavigation.axis = nextAxis;
+				state.wheelNavigation.direction = nextDirection;
+				state.wheelNavigation.accumulatedX += deltaX;
+				state.wheelNavigation.accumulatedY += deltaY;
+
+				const accumulatedAbsX = Math.abs(state.wheelNavigation.accumulatedX);
+				const accumulatedAbsY = Math.abs(state.wheelNavigation.accumulatedY);
+
+				if (accumulatedAbsX < wheelNavigationThreshold && accumulatedAbsY < wheelNavigationThreshold) {
+					return;
+				}
+
+				let direction = null;
+
+				if (accumulatedAbsX >= accumulatedAbsY) {
+					direction = state.wheelNavigation.accumulatedX > 0 ? 'right' : 'left';
+				}
+				else {
+					direction = state.wheelNavigation.accumulatedY > 0 ? 'down' : 'up';
+				}
+
+				state.wheelNavigation.accumulatedX = 0;
+				state.wheelNavigation.accumulatedY = 0;
+				state.wheelNavigation.hasNavigated = true;
+				state.wheelNavigation.lastNavigationAt = now;
+				state.wheelNavigation.minSinceNavigate = speed;
+				navigateActiveDeck(direction);
+			}
+
 			function getFrame(mode) {
 				return mode === 'overview' ? overviewFrame : normalFrame;
 			}
@@ -221,7 +390,7 @@
 				return frame.contentWindow && frame.contentWindow.revealDeck ? frame.contentWindow.revealDeck : null;
 			}
 
-			function setMode(mode) {
+			function setMode(mode, { syncInactive = true } = {}) {
 				state.activeMode = mode;
 				state.transitionProgress = mode === 'overview' ? 1 : 0;
 				document.body.classList.toggle('mode-normal', mode === 'normal');
@@ -237,7 +406,9 @@
 					// No-op if the iframe is not ready to take focus yet.
 				}
 
-				syncInactiveDeck();
+				if (syncInactive) {
+					syncInactiveDeck();
+				}
 			}
 
 			function syncDeck(mode, indices) {
@@ -267,6 +438,10 @@
 				if (event.ctrlKey) {
 					event.preventDefault();
 					updatePinchProgress(clamp(event.deltaY * 0.004, -0.24, 0.24));
+				}
+				else {
+					event.preventDefault();
+					queueWheelNavigation(event.deltaX, event.deltaY);
 				}
 			}, { passive: false });
 
@@ -308,6 +483,27 @@
 					return;
 				}
 
+				if (data.type === 'open-normal') {
+					if (data.indices) {
+						state.lastIndices.overview = data.indices;
+						state.lastIndices.normal = data.indices;
+					}
+
+					if (data.indices) {
+						syncDeck('normal', data.indices);
+					}
+					requestAnimationFrame(() => {
+						startClickZoom();
+						setMode('normal', { syncInactive: false });
+						if (data.indices) {
+							setTimeout(() => {
+								syncDeck('overview', data.indices);
+							}, clickZoomDuration);
+						}
+					});
+					return;
+				}
+
 				if (data.type === 'pinch') {
 					if (data.pinchType === 'wheel') {
 						updatePinchProgress(clamp((data.deltaY || 0) * 0.004, -0.24, 0.24));
@@ -327,6 +523,11 @@
 						state.pinchGestureScale = 1;
 						schedulePinchSnap();
 					}
+					return;
+				}
+
+				if (data.type === 'wheel-nav') {
+					queueWheelNavigation(data.deltaX || 0, data.deltaY || 0);
 				}
 			});
 

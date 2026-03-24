@@ -351,6 +351,21 @@
 				return null;
 			}
 
+			function getIndicesFromSlideElement(slideElement) {
+				if (!slideElement) {
+					return null;
+				}
+
+				const h = Number(slideElement.getAttribute('data-index-h'));
+				const v = Number(slideElement.getAttribute('data-index-v') || 0);
+
+				if (Number.isNaN(h) || Number.isNaN(v)) {
+					return null;
+				}
+
+				return { h, v, f: 0 };
+			}
+
 			function notifyParent(type, data = {}) {
 				if (!isDualMode || window.parent === window) {
 					return;
@@ -391,6 +406,14 @@
 				});
 			}
 
+			function forwardParentSwipe(data = {}) {
+				if (!isDualMode) {
+					return;
+				}
+
+				notifyParent('wheel-nav', data);
+			}
+
 			if (isDualMode) {
 				document.addEventListener('keydown', (event) => {
 					if (event.key === 'o' || event.key === 'O' || event.key === 'Escape') {
@@ -405,6 +428,14 @@
 						event.preventDefault();
 						event.stopImmediatePropagation();
 						forwardParentPinch('wheel', {
+							deltaY: event.deltaY,
+						});
+					}
+					else {
+						event.preventDefault();
+						event.stopImmediatePropagation();
+						forwardParentSwipe({
+							deltaX: event.deltaX,
 							deltaY: event.deltaY,
 						});
 					}
@@ -430,6 +461,37 @@
 						scale: event.scale || 1,
 					});
 				}, { passive: false, capture: true });
+
+				if (isOverviewDeck) {
+					document.addEventListener('click', (event) => {
+						if (!Reveal.getRevealElement().classList.contains('overview')) {
+							return;
+						}
+
+						const slideElement = event.target.closest('.slides section');
+						if (!slideElement || slideElement.classList.contains('stack')) {
+							return;
+						}
+
+						const indices = getIndicesFromSlideElement(slideElement);
+						if (!indices) {
+							return;
+						}
+
+						const rect = slideElement.getBoundingClientRect();
+						const clickCenter = {
+							x: rect.left + (rect.width / 2),
+							y: rect.top + (rect.height / 2),
+						};
+
+						event.preventDefault();
+						event.stopImmediatePropagation();
+						notifyParent('open-normal', {
+							indices,
+							clickCenter,
+						});
+					}, true);
+				}
 			}
 
 			document.addEventListener('gesturestart', preventOverviewPinch, { passive: false });
@@ -503,6 +565,7 @@
 						indexf: event.indexf || 0,
 					});
 				});
+
 			}
 
 			Reveal.on('ready', updateHelperTip);
