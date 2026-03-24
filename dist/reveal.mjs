@@ -1695,7 +1695,7 @@ class Wi {
       this.active = !0, this.Reveal.getRevealElement().classList.add("overview"), this.Reveal.getRevealElement().classList.add("overview-activating"), this.Reveal.cancelAutoSlide(), this.Reveal.getSlidesElement().appendChild(this.Reveal.getBackgroundsElement()), S(this.Reveal.getRevealElement(), de).forEach((X) => {
         X.classList.contains("stack") || X.addEventListener("click", this.onSlideClicked, !0);
       });
-      const e = 70, i = this.Reveal.getComputedSlideSize(), t = e * 2, a = i.height + 0;
+      const e = 70, i = this.Reveal.getComputedSlideSize(), t = e * 2, a = i.height + i.height * 0.1;
       this.overviewSlideWidth = i.width + t, this.overviewSlideHeight = a;
       const r = this.Reveal.getRevealElement(), o = this.Reveal.getSlidesElement(), c = this.Reveal.getBackgroundsElement(), u = this.Reveal.getCurrentSlide(), g = u ? u.getBoundingClientRect() : null, y = o.getBoundingClientRect(), p = r.getBoundingClientRect(), b = c.getBoundingClientRect(), l = window.getComputedStyle(o), E = window.getComputedStyle(c), I = Math.max(Math.min(window.innerWidth, window.innerHeight) / 5, 150) / Math.min(window.innerWidth, window.innerHeight), O = [
         "scale(" + I + ")",

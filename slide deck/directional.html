@@ -31,10 +31,13 @@
 				height: 100%;
 			}
 
+			.reveal.overview:not([data-dual-mode='true']) {
+				touch-action: none;
+			}
+
 			.reveal .slides {
 				width: 100%;
-				height: auto !important;
-				aspect-ratio: 16 / 9;
+				height: 100%;
 			}
 
 			.reveal.overview:not(.overview-activating) .slides {
@@ -69,10 +72,10 @@
 			.reveal .backgrounds {
 				position: absolute;
 				width: 100%;
+				height: 100%;
 				top: 0;
 				left: 0;
 				perspective: 600px;
-				aspect-ratio: 16 / 9;
 			}
 
 			.reveal .slides section {
@@ -86,7 +89,7 @@
 				padding-top: 0;
 				padding-bottom: 0;
 				pointer-events: none;
-				height: auto;
+				height: 100%;
 			}
 
 			.reveal.overview .slides > section.stack {
@@ -95,7 +98,6 @@
 				background: none;
 				outline: none;
 				overflow: visible;
-				aspect-ratio: 16 / 9;
 			}
 
 			.reveal img,
@@ -237,6 +239,22 @@
 			const controlsRoot = () => document.querySelector('.reveal .controls');
 			const helperTip = document.getElementById('helper-tip');
 			const helperIconColor = 'white';
+			const deckMode = new URLSearchParams(window.location.search).get('mode');
+			const isDualMode = deckMode === 'normal' || deckMode === 'overview';
+			const isOverviewDeck = deckMode === 'overview';
+			const revealCanvas = {
+				width: 1600,
+				height: 900,
+				margin: 0,
+			};
+
+			if (isDualMode && helperTip) {
+				helperTip.hidden = true;
+			}
+
+			if (isDualMode) {
+				document.querySelector('.reveal')?.setAttribute('data-dual-mode', 'true');
+			}
 
 			const downTipIcon = `
 				<span class="helper-tip__icon" aria-hidden="true">
@@ -287,7 +305,11 @@
 			}
 
 			function updateHelperTip() {
-				if (!helperTip) {
+				if (!helperTip || isDualMode) {
+					if (helperTip) {
+						helperTip.hidden = true;
+						helperTip.innerHTML = '';
+					}
 					return;
 				}
 
@@ -329,6 +351,93 @@
 				return null;
 			}
 
+			function notifyParent(type, data = {}) {
+				if (!isDualMode || window.parent === window) {
+					return;
+				}
+
+				window.parent.postMessage({
+					source: 'directional-deck',
+					mode: isOverviewDeck ? 'overview' : 'normal',
+					type,
+					...data,
+				}, '*');
+			}
+
+			function isOverviewMode() {
+				return Reveal.getRevealElement().classList.contains('overview');
+			}
+
+			function preventOverviewPinch(event) {
+				if (!isDualMode && isOverviewMode()) {
+					event.preventDefault();
+				}
+			}
+
+			function preventOverviewMultitouch(event) {
+				if (!isDualMode && isOverviewMode() && event.touches && event.touches.length > 1) {
+					event.preventDefault();
+				}
+			}
+
+			function forwardParentPinch(type, data = {}) {
+				if (!isDualMode) {
+					return;
+				}
+
+				notifyParent('pinch', {
+					pinchType: type,
+					...data,
+				});
+			}
+
+			if (isDualMode) {
+				document.addEventListener('keydown', (event) => {
+					if (event.key === 'o' || event.key === 'O' || event.key === 'Escape') {
+						event.preventDefault();
+						event.stopImmediatePropagation();
+						notifyParent('toggle-request');
+					}
+				}, true);
+
+				document.addEventListener('wheel', (event) => {
+					if (event.ctrlKey) {
+						event.preventDefault();
+						event.stopImmediatePropagation();
+						forwardParentPinch('wheel', {
+							deltaY: event.deltaY,
+						});
+					}
+				}, { passive: false, capture: true });
+
+				document.addEventListener('gesturestart', (event) => {
+					event.preventDefault();
+					forwardParentPinch('gesturestart', {
+						scale: event.scale || 1,
+					});
+				}, { passive: false, capture: true });
+
+				document.addEventListener('gesturechange', (event) => {
+					event.preventDefault();
+					forwardParentPinch('gesturechange', {
+						scale: event.scale || 1,
+					});
+				}, { passive: false, capture: true });
+
+				document.addEventListener('gestureend', (event) => {
+					event.preventDefault();
+					forwardParentPinch('gestureend', {
+						scale: event.scale || 1,
+					});
+				}, { passive: false, capture: true });
+			}
+
+			document.addEventListener('gesturestart', preventOverviewPinch, { passive: false });
+			document.addEventListener('gesturechange', preventOverviewPinch, { passive: false });
+			document.addEventListener('gestureend', preventOverviewPinch, { passive: false });
+			document.addEventListener('touchstart', preventOverviewMultitouch, { passive: false });
+			document.addEventListener('touchmove', preventOverviewMultitouch, { passive: false });
+
 			for (let groupIndex = 0; groupIndex < groupStarts.length; groupIndex += 1) {
 				const start = groupStarts[groupIndex];
 				const end = groupIndex + 1 < groupStarts.length ? groupStarts[groupIndex + 1] - 1 : slideCount;
@@ -343,7 +452,21 @@
 				slidesRoot.appendChild(group);
 			}
 
-			Reveal.initialize({
+			window.revealDeck = Reveal;
+
+			Reveal.initialize(isDualMode ? {
+				...revealCanvas,
+				hash: false,
+				controls: false,
+				progress: false,
+				center: false,
+				overview: isOverviewDeck,
+				zoom: false,
+				transition: 'fade',
+				transitionSpeed: 'fast',
+				plugins: [],
+			} : {
+				...revealCanvas,
 				hash: true,
 				controls: true,
 				progress: true,
@@ -354,6 +477,33 @@
 				transitionSpeed: 'fast',
 				plugins: [RevealZoom],
 			});
+
+			if (isDualMode) {
+				Reveal.on('ready', () => {
+					if (isOverviewDeck) {
+						requestAnimationFrame(() => {
+							Reveal.toggleOverview();
+							requestAnimationFrame(() => {
+								notifyParent('ready', {
+									indices: Reveal.getIndices(),
+								});
+							});
+						});
+					} else {
+						notifyParent('ready', {
+							indices: Reveal.getIndices(),
+						});
+					}
+				});
+
+				Reveal.on('slidechanged', (event) => {
+					notifyParent('slidechanged', {
+						indexh: event.indexh,
+						indexv: event.indexv,
+						indexf: event.indexf || 0,
+					});
+				});
+			}
 
 			Reveal.on('ready', updateHelperTip);
 			Reveal.on('overviewshown', updateHelperTip);

@@ -49,7 +49,7 @@ export default class Overview {
 			const margin = 70;
 			const slideSize = this.Reveal.getComputedSlideSize();
 			const horizontalMargin = margin * 2;
-			const verticalGap = 0;
+			const verticalGap = slideSize.height * 0.1;
 			const verticalStep = slideSize.height + verticalGap;
 			this.overviewSlideWidth = slideSize.width + horizontalMargin;
 			this.overviewSlideHeight = verticalStep;

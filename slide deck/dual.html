@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta
+			name="viewport"
+			content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+		/>
+
+		<title>Slide Deck Dual</title>
+
+		<style>
+			:root {
+				--frame-scale-normal-active: 1;
+				--frame-scale-normal-inactive: 0.2;
+				--frame-scale-overview-active: 1;
+				--frame-scale-overview-inactive: 5;
+			}
+
+			html,
+			body {
+				width: 100%;
+				height: 100%;
+				margin: 0;
+				overflow: hidden;
+				background: #000;
+			}
+
+			body {
+				font-family: Arial, Helvetica, sans-serif;
+			}
+
+			.stage {
+				position: relative;
+				width: 100vw;
+				height: 100vh;
+				overflow: hidden;
+				background: #000;
+			}
+
+			.deck-frame {
+				position: absolute;
+				inset: 0;
+				width: 100%;
+				height: 100%;
+				border: 0;
+				background: #000;
+				transform-origin: 50% 50%;
+				transition:
+					opacity 560ms cubic-bezier(0.22, 0.61, 0.36, 1),
+					transform 560ms cubic-bezier(0.22, 0.61, 0.36, 1);
+			}
+
+			body.is-pinching .deck-frame {
+				transition: none;
+			}
+
+			body:not(.ready) .deck-frame {
+				opacity: 0;
+			}
+
+			.deck-frame--normal {
+				z-index: 2;
+			}
+
+			.deck-frame--overview {
+				z-index: 1;
+			}
+
+			body.mode-normal .deck-frame--normal {
+				opacity: 1;
+				transform: scale(var(--frame-scale-normal-active));
+				pointer-events: auto;
+			}
+
+			body.mode-normal .deck-frame--overview {
+				opacity: 0;
+				transform: scale(var(--frame-scale-overview-inactive));
+				pointer-events: none;
+			}
+
+			body.mode-overview .deck-frame--normal {
+				opacity: 0;
+				transform: scale(var(--frame-scale-normal-inactive));
+				pointer-events: none;
+			}
+
+			body.mode-overview .deck-frame--overview {
+				opacity: 1;
+				transform: scale(var(--frame-scale-overview-active));
+				pointer-events: auto;
+			}
+
+			.toolbar {
+				position: fixed;
+				top: 16px;
+				right: 16px;
+				z-index: 20;
+			}
+
+			.mode-toggle {
+				border: 0;
+				border-radius: 999px;
+				padding: 10px 14px;
+				background: rgba(255, 255, 255, 0.12);
+				color: #fff;
+				font: 14px/1 Arial, Helvetica, sans-serif;
+				letter-spacing: 0.01em;
+				cursor: pointer;
+				backdrop-filter: blur(10px);
+			}
+
+			.mode-toggle:hover {
+				background: rgba(255, 255, 255, 0.18);
+			}
+		</style>
+	</head>
+	<body class="mode-normal">
+		<div class="stage">
+			<iframe
+				class="deck-frame deck-frame--normal"
+				id="normal-frame"
+				title="Normal deck"
+				src="./directional.html?mode=normal"
+			></iframe>
+			<iframe
+				class="deck-frame deck-frame--overview"
+				id="overview-frame"
+				title="Overview deck"
+				src="./directional.html?mode=overview"
+			></iframe>
+		</div>
+
+		<div class="toolbar">
+			<button class="mode-toggle" id="mode-toggle" type="button">Switch to overview</button>
+		</div>
+
+		<script type="module">
+			const normalFrame = document.getElementById('normal-frame');
+			const overviewFrame = document.getElementById('overview-frame');
+			const modeToggle = document.getElementById('mode-toggle');
+			const state = {
+				activeMode: 'normal',
+				transitionProgress: 0,
+				ready: {
+					normal: false,
+					overview: false,
+				},
+				lastIndices: {
+					normal: { h: 0, v: 0, f: 0 },
+					overview: { h: 0, v: 0, f: 0 },
+				},
+				syncing: false,
+				pinchGestureScale: 1,
+				pinchSnapTimer: null,
+			};
+
+			const scales = {
+				normalActive: 1,
+				normalInactive: 0.2,
+				overviewActive: 1,
+				overviewInactive: 5,
+			};
+
+			function clamp(value, min, max) {
+				return Math.min(max, Math.max(min, value));
+			}
+
+			function lerp(start, end, progress) {
+				return start + (end - start) * progress;
+			}
+
+			function applyTransitionProgress(progress) {
+				state.transitionProgress = clamp(progress, 0, 1);
+
+				const normalOpacity = 1 - state.transitionProgress;
+				const overviewOpacity = state.transitionProgress;
+				const normalScale = lerp(scales.normalActive, scales.normalInactive, state.transitionProgress);
+				const overviewScale = lerp(scales.overviewInactive, scales.overviewActive, state.transitionProgress);
+
+				normalFrame.style.opacity = normalOpacity.toFixed(4);
+				normalFrame.style.transform = `scale(${normalScale})`;
+				overviewFrame.style.opacity = overviewOpacity.toFixed(4);
+				overviewFrame.style.transform = `scale(${overviewScale})`;
+
+				normalFrame.style.pointerEvents = state.transitionProgress < 0.5 ? 'auto' : 'none';
+				overviewFrame.style.pointerEvents = state.transitionProgress >= 0.5 ? 'auto' : 'none';
+			}
+
+			function clearPinchSnapTimer() {
+				if (state.pinchSnapTimer) {
+					clearTimeout(state.pinchSnapTimer);
+					state.pinchSnapTimer = null;
+				}
+			}
+
+			function schedulePinchSnap() {
+				clearPinchSnapTimer();
+				state.pinchSnapTimer = setTimeout(() => {
+					document.body.classList.remove('is-pinching');
+					setMode(state.transitionProgress >= 0.5 ? 'overview' : 'normal');
+				}, 120);
+			}
+
+			function updatePinchProgress(delta) {
+				if (state.transitionProgress > 0.5 && delta < 0) {
+					delta *= 1.9;
+				}
+
+				document.body.classList.add('is-pinching');
+				applyTransitionProgress(state.transitionProgress + delta);
+				schedulePinchSnap();
+			}
+
+			function getFrame(mode) {
+				return mode === 'overview' ? overviewFrame : normalFrame;
+			}
+
+			function getDeck(mode) {
+				const frame = getFrame(mode);
+				return frame.contentWindow && frame.contentWindow.revealDeck ? frame.contentWindow.revealDeck : null;
+			}
+
+			function setMode(mode) {
+				state.activeMode = mode;
+				state.transitionProgress = mode === 'overview' ? 1 : 0;
+				document.body.classList.toggle('mode-normal', mode === 'normal');
+				document.body.classList.toggle('mode-overview', mode === 'overview');
+				modeToggle.textContent = mode === 'normal' ? 'Switch to overview' : 'Back to normal';
+				applyTransitionProgress(state.transitionProgress);
+
+				const activeFrame = getFrame(mode);
+				try {
+					activeFrame.contentWindow.focus();
+					activeFrame.contentWindow.document.body.focus();
+				} catch (error) {
+					// No-op if the iframe is not ready to take focus yet.
+				}
+
+				syncInactiveDeck();
+			}
+
+			function syncDeck(mode, indices) {
+				const deck = getDeck(mode);
+				if (!deck || !state.ready[mode]) {
+					return;
+				}
+
+				state.syncing = true;
+				deck.slide(indices.h, indices.v, indices.f || 0);
+				requestAnimationFrame(() => {
+					state.syncing = false;
+				});
+			}
+
+			function syncInactiveDeck() {
+				const activeIndices = state.lastIndices[state.activeMode];
+				const inactiveMode = state.activeMode === 'normal' ? 'overview' : 'normal';
+				syncDeck(inactiveMode, activeIndices);
+			}
+
+			modeToggle.addEventListener('click', () => {
+				setMode(state.activeMode === 'normal' ? 'overview' : 'normal');
+			});
+
+			document.addEventListener('wheel', (event) => {
+				if (event.ctrlKey) {
+					event.preventDefault();
+					updatePinchProgress(clamp(event.deltaY * 0.004, -0.24, 0.24));
+				}
+			}, { passive: false });
+
+			window.addEventListener('message', (event) => {
+				const data = event.data;
+				if (!data || data.source !== 'directional-deck') {
+					return;
+				}
+
+				if (data.type === 'ready') {
+					state.ready[data.mode] = true;
+					state.lastIndices[data.mode] = data.indices || state.lastIndices[data.mode];
+
+					if (state.ready.normal && state.ready.overview) {
+						document.body.classList.add('ready');
+						syncInactiveDeck();
+					}
+
+					return;
+				}
+
+				if (data.type === 'slidechanged') {
+					state.lastIndices[data.mode] = {
+						h: data.indexh,
+						v: data.indexv,
+						f: data.indexf || 0,
+					};
+
+					if (!state.syncing) {
+						const inactiveMode = data.mode === 'normal' ? 'overview' : 'normal';
+						syncDeck(inactiveMode, state.lastIndices[data.mode]);
+					}
+
+					return;
+				}
+
+				if (data.type === 'toggle-request') {
+					setMode(state.activeMode === 'normal' ? 'overview' : 'normal');
+					return;
+				}
+
+				if (data.type === 'pinch') {
+					if (data.pinchType === 'wheel') {
+						updatePinchProgress(clamp((data.deltaY || 0) * 0.004, -0.24, 0.24));
+					}
+					else if (data.pinchType === 'gesturestart') {
+						document.body.classList.add('is-pinching');
+						state.pinchGestureScale = data.scale || 1;
+						clearPinchSnapTimer();
+					}
+					else if (data.pinchType === 'gesturechange') {
+						const nextScale = data.scale || 1;
+						const delta = clamp((state.pinchGestureScale - nextScale) * 1.35, -0.24, 0.24);
+						state.pinchGestureScale = nextScale;
+						updatePinchProgress(delta);
+					}
+					else if (data.pinchType === 'gestureend') {
+						state.pinchGestureScale = 1;
+						schedulePinchSnap();
+					}
+				}
+			});
+
+			applyTransitionProgress(0);
+		</script>
+	</body>
+</html>
