@@ -1,0 +1,31 @@
+GET
+http://127.0.0.1:5500/favicon.ico
+[HTTP/1.1 404 Not Found 0ms]
+
+[reveal overview] activate diagnostics 
+Object { revealRect: DOMRect, slidesRect: DOMRect, backgroundsRect: DOMRect, currentSlideRect: DOMRect, slidesTransform: "matrix(1.91146, 0, 0, 1.91146, -480, -270)", slidesTransformOrigin: "480px 270px", slidesTransition: "transform 0.26s cubic-bezier(0.22, 0.61, 0.36, 1)", backgroundsTransform: "none", backgroundsTransformOrigin: "480px 270px", backgroundsTransition: "transform 0.26s cubic-bezier(0.22, 0.61, 0.36, 1)", … }
+reveal.mjs:1705:15
+[reveal overview] update diagnostics 
+Object { indices: {…}, scale: 0.2, targetTransform: "scale(0.2) translateX(-4400px) translateY(-1400px)", slidesTransformBefore: "matrix(1.91146, 0, 0, 1.91146, -480, -270)", slidesTransformOriginBefore: "480px 270px", slidesInlineStyleBefore: "width: 960px; height: 700px; inset: 50% auto auto 50%; transform: translate(-50%, -50%) scale(1.91146);", currentSlide: {…} }
+reveal.mjs:1773:13
+[reveal overview] update diagnostics 
+Object { indices: {…}, scale: 0.2, targetTransform: "scale(0.2) translateX(-4400px) translateY(-1400px)", slidesTransformBefore: "matrix(1.91146, 0, 0, 1.91146, -480, -270)", slidesTransformOriginBefore: "480px 270px", slidesInlineStyleBefore: "width: 960px; height: 700px; inset: 50% auto auto 50%; transform: translate(-50%, -50%) scale(1.91146) scale(0.2) translateX(-4400px) translateY(-1400px);", currentSlide: {…} }
+reveal.mjs:1773:13
+[reveal overview] shown immediate 
+Object { activeIndices: {…}, revealClasses: "reveal fade focused is-vertical-slide has-vertical-slides has-horizontal-slides ready overview", revealRect: DOMRect, slidesRect: DOMRect, backgroundsRect: DOMRect, currentSlideRect: DOMRect, slidesTransform: "matrix(1.91146, 0, 0, 1.91146, -480, -270)", slidesTransformOrigin: "480px 270px", slidesTransition: "transform 0.26s cubic-bezier(0.22, 0.61, 0.36, 1)", backgroundsTransform: "none", … }
+directional.html:243:13
+[reveal overview] update applied 
+Object { slidesTransformAfter: "matrix(1.91146, 0, 0, 1.91146, -480, -270)", slidesTransformOriginAfter: "480px 270px", slidesInlineStyleAfter: "width: 960px; height: 700px; inset: 50% auto auto 50%; transform: translate(-50%, -50%) scale(1.91146) scale(0.2) translateX(-4400px) translateY(-1400px);", currentSlideAfter: {…} }
+reveal.mjs:1789:15
+[reveal overview] update applied 
+Object { slidesTransformAfter: "matrix(1.91146, 0, 0, 1.91146, -480, -270)", slidesTransformOriginAfter: "480px 270px", slidesInlineStyleAfter: "width: 960px; height: 700px; inset: 50% auto auto 50%; transform: translate(-50%, -50%) scale(1.91146) scale(0.2) translateX(-4400px) translateY(-1400px);", currentSlideAfter: {…} }
+reveal.mjs:1789:15
+[reveal overview] shown frame 1 
+Object { activeIndices: {…}, revealClasses: "reveal fade focused is-vertical-slide has-vertical-slides has-horizontal-slides ready overview", revealRect: DOMRect, slidesRect: DOMRect, backgroundsRect: DOMRect, currentSlideRect: DOMRect, slidesTransform: "matrix(1.91146, 0, 0, 1.91146, -480, -270)", slidesTransformOrigin: "480px 270px", slidesTransition: "transform 0.26s cubic-bezier(0.22, 0.61, 0.36, 1)", backgroundsTransform: "none", … }
+directional.html:243:13
+[reveal overview] shown frame 2 
+Object { activeIndices: {…}, revealClasses: "reveal fade focused is-vertical-slide has-vertical-slides has-horizontal-slides ready overview", revealRect: DOMRect, slidesRect: DOMRect, backgroundsRect: DOMRect, currentSlideRect: DOMRect, slidesTransform: "matrix(1.77594, 0, 0, 1.77594, -1172.5, -490.341)", slidesTransformOrigin: "480px 270px", slidesTransition: "transform 0.26s cubic-bezier(0.22, 0.61, 0.36, 1)", backgroundsTransform: "none", … }
+directional.html:243:13
+[reveal overview] shown frame 3 
+Object { activeIndices: {…}, revealClasses: "reveal fade focused is-vertical-slide has-vertical-slides has-horizontal-slides ready overview", revealRect: DOMRect, slidesRect: DOMRect, backgroundsRect: DOMRect, currentSlideRect: DOMRect, slidesTransform: "matrix(1.64227, 0, 0, 1.64227, -1752.05, -674.742)", slidesTransformOrigin: "480px 270px", slidesTransition: "transform 0.26s cubic-bezier(0.22, 0.61, 0.36, 1)", backgroundsTransform: "none", … }
+directional.html:243:13

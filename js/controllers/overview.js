@@ -53,14 +53,54 @@ export default class Overview {
 			this.overviewSlideWidth = slideSize.width + horizontalMargin;
 			this.overviewSlideHeight = verticalStep;
 
-			console.log( '[reveal overview] activate', {
-				slideSize,
-				margin,
-				horizontalMargin,
-				verticalGap,
-				verticalStep,
-				overviewSlideWidth: this.overviewSlideWidth,
-				overviewSlideHeight: this.overviewSlideHeight
+			const revealElement = this.Reveal.getRevealElement();
+			const slidesElement = this.Reveal.getSlidesElement();
+			const backgroundsElement = this.Reveal.getBackgroundsElement();
+			const currentSlide = this.Reveal.getCurrentSlide();
+			const currentSlideRect = currentSlide ? currentSlide.getBoundingClientRect() : null;
+			const slidesRect = slidesElement.getBoundingClientRect();
+			const revealRect = revealElement.getBoundingClientRect();
+			const backgroundsRect = backgroundsElement.getBoundingClientRect();
+			const slidesStyle = window.getComputedStyle( slidesElement );
+			const backgroundsStyle = window.getComputedStyle( backgroundsElement );
+			const computedScale = Math.max( Math.min( window.innerWidth, window.innerHeight ) / 5, 150 ) / Math.min( window.innerWidth, window.innerHeight );
+			const targetTransform = [
+				'scale(' + computedScale + ')',
+				'translateX(' + ( -this.Reveal.getIndices().h * this.overviewSlideWidth ) + 'px)',
+				'translateY(' + ( -this.Reveal.getIndices().v * this.overviewSlideHeight ) + 'px)'
+			].join( ' ' );
+
+			console.log( '[reveal overview] activate diagnostics', {
+				revealRect,
+				slidesRect,
+				backgroundsRect,
+				currentSlideRect,
+				slidesTransform: slidesStyle.transform,
+				slidesTransformOrigin: slidesStyle.transformOrigin,
+				slidesTransition: slidesStyle.transition,
+				backgroundsTransform: backgroundsStyle.transform,
+				backgroundsTransformOrigin: backgroundsStyle.transformOrigin,
+				backgroundsTransition: backgroundsStyle.transition,
+				computedScale,
+				targetTransform,
+				slidesInlineStyle: slidesElement.getAttribute( 'style' ),
+				backgroundsInlineStyle: backgroundsElement.getAttribute( 'style' ),
+				currentSlideInlineStyle: currentSlide ? currentSlide.getAttribute( 'style' ) : null,
+				activeIndices: this.Reveal.getIndices(),
+				currentSlideTag: currentSlide ? currentSlide.nodeName : null,
+				currentSlideClasses: currentSlide ? currentSlide.className : null,
+				currentSlideSize: currentSlideRect ? {
+					width: currentSlideRect.width,
+					height: currentSlideRect.height
+				} : null,
+				currentSlideCenter: currentSlideRect ? {
+					x: currentSlideRect.left + ( currentSlideRect.width / 2 ),
+					y: currentSlideRect.top + ( currentSlideRect.height / 2 )
+				} : null,
+				viewportCenter: {
+					x: window.innerWidth / 2,
+					y: window.innerHeight / 2
+				}
 			} );
 
 			// Reverse in RTL mode
@@ -100,11 +140,6 @@ export default class Overview {
 		// Layout slides
 		this.Reveal.getHorizontalSlides().forEach( ( hslide, h ) => {
 			hslide.setAttribute( 'data-index-h', h );
-			console.log( '[reveal overview] horizontal slide layout', {
-				h,
-				overviewSlideWidth: this.overviewSlideWidth,
-				transform: 'translate3d(' + ( h * this.overviewSlideWidth ) + 'px, 0, 0)'
-			} );
 			transformElement( hslide, 'translate3d(' + ( h * this.overviewSlideWidth ) + 'px, 0, 0)' );
 
 			if( hslide.classList.contains( 'stack' ) ) {
@@ -112,13 +147,6 @@ export default class Overview {
 				queryAll( hslide, 'section' ).forEach( ( vslide, v ) => {
 					vslide.setAttribute( 'data-index-h', h );
 					vslide.setAttribute( 'data-index-v', v );
-
-					console.log( '[reveal overview] vertical slide layout', {
-						h,
-						v,
-						overviewSlideHeight: this.overviewSlideHeight,
-						transform: 'translate3d(0, ' + ( v * this.overviewSlideHeight ) + 'px, 0)'
-					} );
 
 					transformElement( vslide, 'translate3d(0, ' + ( v * this.overviewSlideHeight ) + 'px, 0)' );
 				} );
@@ -146,28 +174,43 @@ export default class Overview {
 		const vmin = Math.min( window.innerWidth, window.innerHeight );
 		const scale = Math.max( vmin / 5, 150 ) / vmin;
 		const indices = this.Reveal.getIndices();
+		const targetTransform = [
+			'scale(' + scale + ')',
+			'translateX(' + ( -indices.h * this.overviewSlideWidth ) + 'px)',
+			'translateY(' + ( -indices.v * this.overviewSlideHeight ) + 'px)'
+		].join( ' ' );
 
-		console.log( '[reveal overview] update', {
-			windowInnerWidth: window.innerWidth,
-			windowInnerHeight: window.innerHeight,
-			vmin,
-			scale,
+		console.log( '[reveal overview] update diagnostics', {
 			indices,
-			overviewSlideWidth: this.overviewSlideWidth,
-			overviewSlideHeight: this.overviewSlideHeight,
-			overviewTransform: [
-				'scale(' + scale + ')',
-				'translateX(' + ( -indices.h * this.overviewSlideWidth ) + 'px)',
-				'translateY(' + ( -indices.v * this.overviewSlideHeight ) + 'px)'
-			].join( ' ' )
+			scale,
+			targetTransform,
+			slidesTransformBefore: window.getComputedStyle( this.Reveal.getSlidesElement() ).transform,
+			slidesTransformOriginBefore: window.getComputedStyle( this.Reveal.getSlidesElement() ).transformOrigin,
+			slidesInlineStyleBefore: this.Reveal.getSlidesElement().getAttribute( 'style' ),
+			currentSlide: this.Reveal.getCurrentSlide() ? {
+				tag: this.Reveal.getCurrentSlide().nodeName,
+				classes: this.Reveal.getCurrentSlide().className,
+				inlineStyle: this.Reveal.getCurrentSlide().getAttribute( 'style' ),
+				rect: this.Reveal.getCurrentSlide().getBoundingClientRect()
+			} : null
 		} );
 
 		this.Reveal.transformSlides( {
-			overview: [
-				'scale('+ scale +')',
-				'translateX('+ ( -indices.h * this.overviewSlideWidth ) +'px)',
-				'translateY('+ ( -indices.v * this.overviewSlideHeight ) +'px)'
-			].join( ' ' )
+			overview: targetTransform
+		} );
+
+		requestAnimationFrame( () => {
+			console.log( '[reveal overview] update applied', {
+				slidesTransformAfter: window.getComputedStyle( this.Reveal.getSlidesElement() ).transform,
+				slidesTransformOriginAfter: window.getComputedStyle( this.Reveal.getSlidesElement() ).transformOrigin,
+				slidesInlineStyleAfter: this.Reveal.getSlidesElement().getAttribute( 'style' ),
+				currentSlideAfter: this.Reveal.getCurrentSlide() ? {
+					tag: this.Reveal.getCurrentSlide().nodeName,
+					classes: this.Reveal.getCurrentSlide().className,
+					inlineStyle: this.Reveal.getCurrentSlide().getAttribute( 'style' ),
+					rect: this.Reveal.getCurrentSlide().getBoundingClientRect()
+				} : null
+			} );
 		} );
 
 	}
