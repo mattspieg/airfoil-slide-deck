@@ -50,6 +50,14 @@
 				);
 			}
 
+			.reveal[data-mobile-deck='true']::after {
+				display: none;
+			}
+
+			.reveal[data-touch-device='true']::after {
+				display: none;
+			}
+
 			.reveal.overview:not([data-dual-mode='true']) {
 				touch-action: none;
 			}
@@ -264,7 +272,12 @@
 			const helperIconColor = 'white';
 			const deckMode = new URLSearchParams(window.location.search).get('mode');
 			const isDualMode = deckMode === 'normal' || deckMode === 'overview';
+			const isMobileDeck = deckMode === 'mobile';
 			const isOverviewDeck = deckMode === 'overview';
+			const isTouchDevice =
+				navigator.maxTouchPoints > 0 ||
+				'ontouchstart' in window ||
+				window.matchMedia('(pointer: coarse)').matches;
 			const revealCanvas = {
 				width: 1600,
 				height: 900,
@@ -278,12 +291,20 @@
 				);
 			};
 
-			if (isDualMode && helperTip) {
+			if ((isDualMode || isMobileDeck) && helperTip) {
 				helperTip.hidden = true;
 			}
 
 			if (isDualMode) {
 				document.querySelector('.reveal')?.setAttribute('data-dual-mode', 'true');
+			}
+
+			if (isMobileDeck) {
+				document.querySelector('.reveal')?.setAttribute('data-mobile-deck', 'true');
+			}
+
+			if (isTouchDevice) {
+				document.querySelector('.reveal')?.setAttribute('data-touch-device', 'true');
 			}
 
 			const downTipIcon = `
@@ -335,7 +356,7 @@
 			}
 
 			function updateHelperTip() {
-				if (!helperTip || isDualMode) {
+				if (!helperTip || isDualMode || isMobileDeck) {
 					if (helperTip) {
 						helperTip.hidden = true;
 						helperTip.innerHTML = '';
@@ -549,7 +570,8 @@
 			Reveal.initialize(isDualMode ? {
 				...revealCanvas,
 				hash: false,
-				controls: true,
+				controls: !isTouchDevice,
+				help: !isTouchDevice,
 				keyboardCondition: allowNonPauseKeyboardInput,
 				progress: false,
 				center: false,
@@ -558,10 +580,24 @@
 				transition: 'fade',
 				transitionSpeed: 'fast',
 				plugins: isOverviewDeck ? [] : [RevealZoom],
+			} : isMobileDeck ? {
+				...revealCanvas,
+				hash: false,
+				controls: false,
+				help: false,
+				keyboard: false,
+				progress: false,
+				center: false,
+				overview: false,
+				zoom: false,
+				transition: 'fade',
+				transitionSpeed: 'fast',
+				plugins: [],
 			} : {
 				...revealCanvas,
 				hash: true,
-				controls: true,
+				controls: !isTouchDevice,
+				help: !isTouchDevice,
 				keyboardCondition: allowNonPauseKeyboardInput,
 				progress: true,
 				center: false,

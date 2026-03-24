@@ -30,6 +30,12 @@
 				font-family: Arial, Helvetica, sans-serif;
 			}
 
+			body.is-mobile-deck .toolbar,
+			body.is-mobile-deck .help-overlay,
+			body.is-mobile-deck .deck-frame--overview {
+				display: none !important;
+			}
+
 			.stage {
 				position: relative;
 				width: 100vw;
@@ -113,7 +119,7 @@
 				border-radius: 999px;
 				padding: 10px 14px;
 				min-height: 40px;
-				background: rgba(255, 255, 255, 0.12);
+				background: rgba(0, 0, 0, 0.18);
 				color: #fff;
 				font: 14px/1 Arial, Helvetica, sans-serif;
 				letter-spacing: 0.01em;
@@ -123,7 +129,7 @@
 
 			.toolbar-button:hover,
 			.help-close:hover {
-				background: rgba(255, 255, 255, 0.18);
+				background: rgba(0, 0, 0, 0.26);
 			}
 
 			.help-toggle {
@@ -274,13 +280,11 @@
 				class="deck-frame deck-frame--normal"
 				id="normal-frame"
 				title="Normal deck"
-				src="./directional.html?mode=normal"
 			></iframe>
 			<iframe
 				class="deck-frame deck-frame--overview"
 				id="overview-frame"
 				title="Overview deck"
-				src="./directional.html?mode=overview"
 			></iframe>
 		</div>
 
@@ -360,7 +364,25 @@
 			const helpOverlay = document.getElementById('help-overlay');
 			const helpClose = document.getElementById('help-close');
 			const helpZoomKbd = document.getElementById('help-zoom-kbd');
-			const state = {
+			const toolbar = document.querySelector('.toolbar');
+			const isMobileDeck =
+				/(iphone|ipod|ipad|android)/gi.test(navigator.userAgent) ||
+				(navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+			if (isMobileDeck) {
+				document.body.classList.add('is-mobile-deck', 'ready');
+				normalFrame.src = './directional.html?mode=mobile';
+				overviewFrame.remove();
+				toolbar?.remove();
+				helpOverlay.remove();
+			}
+			else {
+				normalFrame.src = './directional.html?mode=normal';
+				overviewFrame.src = './directional.html?mode=overview';
+			}
+
+			if (!isMobileDeck) {
+				const state = {
 				activeMode: 'normal',
 				transitionProgress: 0,
 				ready: {
@@ -387,17 +409,17 @@
 					resetTimer: null,
 				},
 				clickZoomTimer: null,
-			};
+				};
 
-			const scales = {
+				const scales = {
 				normalActive: 1,
 				normalInactive: 0.2,
 				overviewActive: 1,
 				overviewInactive: 5,
-			};
-			const clickZoomDuration = 1120;
+				};
+				const clickZoomDuration = 1120;
 
-			function getPlatformModifierLabel() {
+				function getPlatformModifierLabel() {
 				const platform = navigator.userAgentData?.platform || navigator.platform || navigator.userAgent || '';
 
 				if (/Mac|iPhone|iPad|iPod/i.test(platform)) {
@@ -411,7 +433,7 @@
 				return 'Alt + click';
 			}
 
-			function setHelpOpen(isOpen) {
+				function setHelpOpen(isOpen) {
 				helpOverlay.classList.toggle('is-open', isOpen);
 				helpOverlay.setAttribute('aria-hidden', String(!isOpen));
 				helpToggle.setAttribute('aria-expanded', String(isOpen));
@@ -424,13 +446,13 @@
 				}
 			}
 
-			function clamp(value, min, max) {
+				function clamp(value, min, max) {
 				return Math.min(max, Math.max(min, value));
-			}
+				}
 
-			function lerp(start, end, progress) {
+				function lerp(start, end, progress) {
 				return start + (end - start) * progress;
-			}
+				}
 
 			function applyTransitionProgress(progress) {
 				state.transitionProgress = clamp(progress, 0, 1);
@@ -670,29 +692,29 @@
 				syncDeck(inactiveMode, activeIndices);
 			}
 
-			helpZoomKbd.textContent = getPlatformModifierLabel();
+				helpZoomKbd.textContent = getPlatformModifierLabel();
 
-			helpToggle.addEventListener('click', () => {
+				helpToggle.addEventListener('click', () => {
 				setHelpOpen(!helpOverlay.classList.contains('is-open'));
-			});
+				});
 
-			helpClose.addEventListener('click', () => {
+				helpClose.addEventListener('click', () => {
 				setHelpOpen(false);
-			});
+				});
 
-			helpOverlay.addEventListener('click', (event) => {
+				helpOverlay.addEventListener('click', (event) => {
 				if (event.target === helpOverlay) {
 					setHelpOpen(false);
 				}
-			});
+				});
 
-			document.addEventListener('keydown', (event) => {
+				document.addEventListener('keydown', (event) => {
 				if (event.key === 'Escape' && helpOverlay.classList.contains('is-open')) {
 					event.preventDefault();
 					event.stopPropagation();
 					setHelpOpen(false);
 				}
-			}, true);
+				}, true);
 
 			modeToggle.addEventListener('click', () => {
 				setMode(state.activeMode === 'normal' ? 'overview' : 'normal');
@@ -795,7 +817,8 @@
 				}
 			});
 
-			applyTransitionProgress(0);
+				applyTransitionProgress(0);
+			}
 		</script>
 	</body>
 </html>
