@@ -23,12 +23,31 @@
 				width: 100%;
 				height: 100%;
 				margin: 0;
-				background: #000;
+				background: #191919;
 			}
 
 			.reveal {
 				width: 100%;
 				height: 100%;
+				background: #191919;
+			}
+
+			.reveal::after {
+				content: "";
+				position: fixed;
+				right: 0;
+				bottom: 0;
+				width: 192px;
+				height: 192px;
+				pointer-events: none;
+				z-index: 19;
+				background: radial-gradient(
+					circle farthest-side at 100% 100%,
+					rgba(0, 0, 0, 0.5) 0%,
+					rgba(0, 0, 0, 0.26) 48%,
+					rgba(0, 0, 0, 0.12) 72%,
+					rgba(0, 0, 0, 0) 100%
+				);
 			}
 
 			.reveal.overview:not([data-dual-mode='true']) {
@@ -181,6 +200,10 @@
 				transform: none;
 			}
 
+			.reveal .controls {
+				z-index: 20;
+			}
+
 			.helper-tip {
 				position: fixed;
 				left: 50%;
@@ -246,6 +269,13 @@
 				width: 1600,
 				height: 900,
 				margin: 0,
+			};
+			const allowNonPauseKeyboardInput = (event) => {
+				const keyCode = event.keyCode;
+				return !(
+					[58, 59, 66, 86, 190].includes(keyCode) ||
+					(keyCode === 191 && !event.shiftKey)
+				);
 			};
 
 			if (isDualMode && helperTip) {
@@ -519,18 +549,20 @@
 			Reveal.initialize(isDualMode ? {
 				...revealCanvas,
 				hash: false,
-				controls: false,
+				controls: true,
+				keyboardCondition: allowNonPauseKeyboardInput,
 				progress: false,
 				center: false,
 				overview: isOverviewDeck,
-				zoom: false,
+				zoom: !isOverviewDeck,
 				transition: 'fade',
 				transitionSpeed: 'fast',
-				plugins: [],
+				plugins: isOverviewDeck ? [] : [RevealZoom],
 			} : {
 				...revealCanvas,
 				hash: true,
 				controls: true,
+				keyboardCondition: allowNonPauseKeyboardInput,
 				progress: true,
 				center: false,
 				overview: true,

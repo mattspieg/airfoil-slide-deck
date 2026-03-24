@@ -46,10 +46,10 @@ export default class Overview {
 			} );
 
 			// Calculate slide sizes
-			const margin = 70;
+			const margin = 140;
 			const slideSize = this.Reveal.getComputedSlideSize();
 			const horizontalMargin = margin * 2;
-			const verticalGap = slideSize.height * 0.1;
+			const verticalGap = slideSize.height * 0.2;
 			const verticalStep = slideSize.height + verticalGap;
 			this.overviewSlideWidth = slideSize.width + horizontalMargin;
 			this.overviewSlideHeight = verticalStep;
