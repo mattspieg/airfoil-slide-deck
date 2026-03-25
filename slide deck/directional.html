@@ -9,6 +9,16 @@
 
 		<title>Slide Deck Directional</title>
 
+		<link
+			href="https://cdn.prod.website-files.com/61bacad64fa3d3896a3d7a01/63184291d8d8886792d26613_Airfoil%20Favicon.png"
+			rel="apple-touch-icon"
+		/>
+		<link
+			href="https://cdn.prod.website-files.com/61bacad64fa3d3896a3d7a01/6318426d8e85c83957122077_Airfoil%20Favicon%20(1)-5%20(dragged).png"
+			rel="shortcut icon"
+			type="image/x-icon"
+		/>
+
 		<link rel="stylesheet" href="../dist/reset.css" />
 		<link rel="stylesheet" href="../dist/reveal.css" />
 		<link rel="stylesheet" href="../dist/theme/black.css" />
@@ -260,12 +270,17 @@
 		<div class="helper-tip" id="helper-tip" aria-live="polite" hidden></div>
 
 		<script type="module">
-			import Reveal from '../dist/reveal.mjs';
+			import Reveal from '../dist/reveal-transposed.mjs';
 			import RevealZoom from '../plugin/zoom/plugin.js';
 
 			const slidesRoot = document.getElementById('slides');
 			const slideCount = 62;
 			const groupStarts = [1, 2, 8, 14, 19, 24, 29, 34, 39, 44, 49, 54, 58];
+			const groupSizes = groupStarts.map((start, index) => {
+				const end = index + 1 < groupStarts.length ? groupStarts[index + 1] - 1 : slideCount;
+				return end - start + 1;
+			});
+			const logicalGroupProgress = new Map([[0, 0]]);
 			const assetPath = (index) => encodeURI(`source pngs/${index}.png`);
 			const controlsRoot = () => document.querySelector('.reveal .controls');
 			const helperTip = document.getElementById('helper-tip');
@@ -344,6 +359,192 @@
 				return section;
 			}
 
+			function toNumber(value, fallback = 0) {
+				const parsed = Number(value);
+				return Number.isFinite(parsed) ? parsed : fallback;
+			}
+
+			function clampIndex(value, min, max) {
+				if (max < min) {
+					return min;
+				}
+
+				return Math.min(max, Math.max(min, value));
+			}
+
+			function getGroupLength(groupIndex) {
+				const safeGroupIndex = clampIndex(toNumber(groupIndex, 0), 0, groupSizes.length - 1);
+				return groupSizes[safeGroupIndex] || 1;
+			}
+
+			function toLogicalIndices(indices = {}) {
+				const physicalGroup = clampIndex(toNumber(indices.h, 0), 0, groupSizes.length - 1);
+				const physicalItem = clampIndex(toNumber(indices.v, 0), 0, getGroupLength(physicalGroup) - 1);
+
+				return {
+					h: physicalItem,
+					v: physicalGroup,
+					f: toNumber(indices.f ?? indices.indexf, 0),
+				};
+			}
+
+			function toPhysicalIndices(indices = {}) {
+				const logicalGroup = clampIndex(toNumber(indices.v, 0), 0, groupSizes.length - 1);
+				const logicalItem = clampIndex(toNumber(indices.h, 0), 0, getGroupLength(logicalGroup) - 1);
+
+				return {
+					h: logicalGroup,
+					v: logicalItem,
+					f: toNumber(indices.f ?? indices.indexf, 0),
+				};
+			}
+
+			function getLogicalIndices(slideElement) {
+				return slideElement ? toLogicalIndices(Reveal.getIndices(slideElement)) : toLogicalIndices(Reveal.getIndices());
+			}
+
+			function getLogicalAvailableRoutes() {
+				const indices = getLogicalIndices();
+				return {
+					left: indices.h > 0,
+					right: indices.h < getGroupLength(indices.v) - 1,
+					up: indices.v > 0,
+					down: indices.v < groupSizes.length - 1,
+				};
+			}
+
+			function isOverviewActive() {
+				return Reveal.getRevealElement().classList.contains('overview');
+			}
+
+			function slideLogical(h, v, f = 0) {
+				const current = getLogicalIndices();
+				const nextLogical = {
+					h: typeof h === 'number' ? h : current.h,
+					v: typeof v === 'number' ? v : current.v,
+					f: typeof f === 'number' ? f : current.f,
+				};
+				const nextPhysical = toPhysicalIndices(nextLogical);
+
+				Reveal.slide(nextPhysical.h, nextPhysical.v, nextPhysical.f);
+			}
+
+			function navigateLogical(direction) {
+				const indices = getLogicalIndices();
+				const overviewActive = isOverviewActive();
+
+				if (!overviewActive) {
+					logicalGroupProgress.set(indices.v, indices.h);
+				}
+
+				if (direction === 'left') {
+					slideLogical(indices.h - 1, indices.v, indices.f);
+				}
+				else if (direction === 'right') {
+					slideLogical(indices.h + 1, indices.v, indices.f);
+				}
+				else if (direction === 'up') {
+					const targetGroup = indices.v - 1;
+					const targetSlide = overviewActive
+						? indices.h
+						: logicalGroupProgress.has(targetGroup) ? logicalGroupProgress.get(targetGroup) : 0;
+					slideLogical(targetSlide, targetGroup, indices.f);
+				}
+				else if (direction === 'down') {
+					const targetGroup = indices.v + 1;
+					const targetSlide = overviewActive
+						? indices.h
+						: logicalGroupProgress.has(targetGroup) ? logicalGroupProgress.get(targetGroup) : 0;
+					slideLogical(targetSlide, targetGroup, indices.f);
+				}
+			}
+
+			function getOverviewMetrics() {
+				const margin = 140;
+				const slideSize = Reveal.getComputedSlideSize();
+				const horizontalMargin = margin * 2;
+				const verticalGap = slideSize.height * 0.2;
+				const width = slideSize.width + horizontalMargin;
+				const height = slideSize.height + verticalGap;
+
+				return {
+					width: Reveal.getConfig().rtl ? -width : width,
+					height,
+				};
+			}
+
+			function syncTransposedOverview() {
+				// Overview behavior now lives in the transposed Reveal fork.
+			}
+
+			function installTransposedOverviewHooks() {
+				// Overview behavior now lives in the transposed Reveal fork.
+			}
+
+				function handleTransposedArrowKeys(event) {
+					const keyCode = event.keyCode;
+
+				if (![37, 38, 39, 40, 72, 74, 75, 76].includes(keyCode)) {
+					return;
+				}
+
+				if (event.defaultPrevented || event.ctrlKey || event.metaKey) {
+					return;
+				}
+
+				const activeElement = document.activeElement;
+				const activeElementIsEditable = activeElement && (
+					activeElement.isContentEditable === true ||
+					/input|textarea/i.test(activeElement.tagName || '')
+				);
+
+					if (activeElementIsEditable) {
+						return;
+					}
+
+					if (Reveal.isOverlayOpen()) {
+						return;
+					}
+
+					const indices = getLogicalIndices();
+
+				event.preventDefault();
+				event.stopImmediatePropagation();
+
+				if (keyCode === 37 || keyCode === 72) {
+					if (event.shiftKey) {
+						slideLogical(0, indices.v, indices.f);
+					}
+					else {
+						navigateLogical('left');
+					}
+				}
+				else if (keyCode === 39 || keyCode === 76) {
+					if (event.shiftKey) {
+						slideLogical(getGroupLength(indices.v) - 1, indices.v, indices.f);
+					}
+					else {
+						navigateLogical('right');
+					}
+				}
+				else if (keyCode === 38 || keyCode === 75) {
+					if (event.shiftKey) {
+						slideLogical(indices.h, 0, indices.f);
+					}
+					else {
+						navigateLogical('up');
+					}
+				}
+				else if (keyCode === 40 || keyCode === 74) {
+					if (event.shiftKey) {
+						slideLogical(indices.h, groupSizes.length - 1, indices.f);
+					}
+					else {
+						navigateLogical('down');
+					}
+				}
+			}
+
 			function bumpControl(direction) {
 				const control = controlsRoot()?.querySelector(`.navigate-${direction}`);
 				if (!control) {
@@ -364,9 +565,9 @@
 					return;
 				}
 
-				const indices = Reveal.getIndices();
+				const indices = getLogicalIndices();
 				const isOverviewMode = Reveal.getRevealElement().classList.contains('overview');
-				const isTopLevelSlide = indices.v === 0;
+				const isTopLevelSlide = indices.h === 0;
 				const isFirstSlide = indices.h === 0 && indices.v === 0;
 
 				if (!isOverviewMode && isFirstSlide) {
@@ -379,7 +580,7 @@
 				helperTip.innerHTML = isOverviewMode
 					? `Press ${escTipIcon} to exit overview mode.`
 					: isTopLevelSlide
-						? `Press ${downTipIcon} to see project design samples.`
+						? 'Press Right to see project design samples.'
 						: `Press ${escTipIcon} to enter overview mode.`;
 			}
 
@@ -388,8 +589,8 @@
 					return null;
 				}
 
-				const previous = Reveal.getIndices(previousSlide);
-				const current = Reveal.getIndices(currentSlide);
+				const previous = getLogicalIndices(previousSlide);
+				const current = getLogicalIndices(currentSlide);
 
 				if (current.h !== previous.h) {
 					return current.h > previous.h ? 'right' : 'left';
@@ -407,14 +608,7 @@
 					return null;
 				}
 
-				const h = Number(slideElement.getAttribute('data-index-h'));
-				const v = Number(slideElement.getAttribute('data-index-v') || 0);
-
-				if (Number.isNaN(h) || Number.isNaN(v)) {
-					return null;
-				}
-
-				return { h, v, f: 0 };
+				return getLogicalIndices(slideElement);
 			}
 
 			function notifyParent(type, data = {}) {
@@ -545,6 +739,7 @@
 				}
 			}
 
+			document.addEventListener('keydown', handleTransposedArrowKeys, true);
 			document.addEventListener('gesturestart', preventOverviewPinch, { passive: false });
 			document.addEventListener('gesturechange', preventOverviewPinch, { passive: false });
 			document.addEventListener('gestureend', preventOverviewPinch, { passive: false });
@@ -565,13 +760,23 @@
 				slidesRoot.appendChild(group);
 			}
 
-			window.revealDeck = Reveal;
+			const keyboardBindings = {
+				37: () => {},
+				38: () => {},
+				39: () => {},
+				40: () => {},
+				72: () => {},
+				74: () => {},
+				75: () => {},
+				76: () => {},
+			};
 
 			Reveal.initialize(isDualMode ? {
 				...revealCanvas,
 				hash: false,
 				controls: !isTouchDevice,
 				help: !isTouchDevice,
+				keyboard: keyboardBindings,
 				keyboardCondition: allowNonPauseKeyboardInput,
 				progress: false,
 				center: false,
@@ -598,6 +803,7 @@
 				hash: true,
 				controls: !isTouchDevice,
 				help: !isTouchDevice,
+				keyboard: keyboardBindings,
 				keyboardCondition: allowNonPauseKeyboardInput,
 				progress: true,
 				center: false,
@@ -606,7 +812,45 @@
 				transition: 'fade',
 				transitionSpeed: 'fast',
 				plugins: [RevealZoom],
+				});
+
+			const transposedDeck = new Proxy(Reveal, {
+				get(target, property) {
+					if (property === 'left') {
+						return () => navigateLogical('left');
+					}
+
+					if (property === 'right') {
+						return () => navigateLogical('right');
+					}
+
+					if (property === 'up') {
+						return () => navigateLogical('up');
+					}
+
+					if (property === 'down') {
+						return () => navigateLogical('down');
+					}
+
+					if (property === 'slide') {
+						return (h, v, f) => slideLogical(h, v, f);
+					}
+
+					if (property === 'getIndices') {
+						return (slideElement) => getLogicalIndices(slideElement);
+					}
+
+					if (property === 'availableRoutes') {
+						return () => getLogicalAvailableRoutes();
+					}
+
+					const value = target[property];
+					return typeof value === 'function' ? value.bind(target) : value;
+				},
 			});
+
+			window.revealDeck = transposedDeck;
+			installTransposedOverviewHooks();
 
 			if (isDualMode) {
 				Reveal.on('ready', () => {
@@ -615,37 +859,59 @@
 							Reveal.toggleOverview();
 							requestAnimationFrame(() => {
 								notifyParent('ready', {
-									indices: Reveal.getIndices(),
+									indices: getLogicalIndices(),
 								});
 							});
 						});
 					} else {
 						notifyParent('ready', {
-							indices: Reveal.getIndices(),
+							indices: getLogicalIndices(),
 						});
 					}
 				});
 
 				Reveal.on('slidechanged', (event) => {
+					const logicalIndices = getLogicalIndices();
 					notifyParent('slidechanged', {
-						indexh: event.indexh,
-						indexv: event.indexv,
+						indexh: logicalIndices.h,
+						indexv: logicalIndices.v,
 						indexf: event.indexf || 0,
 					});
 				});
 
 			}
 
-			Reveal.on('ready', updateHelperTip);
-			Reveal.on('overviewshown', updateHelperTip);
-			Reveal.on('overviewhidden', updateHelperTip);
+			Reveal.on('ready', () => {
+				updateHelperTip();
+				syncTransposedOverview();
+			});
+			Reveal.on('overviewshown', () => {
+				updateHelperTip();
+				requestAnimationFrame(() => {
+					syncTransposedOverview();
+				});
+			});
+			Reveal.on('overviewhidden', () => {
+				updateHelperTip();
+			});
 			Reveal.on('slidechanged', (event) => {
+				const logicalIndices = getLogicalIndices();
+				if (!isOverviewActive()) {
+					logicalGroupProgress.set(logicalIndices.v, logicalIndices.h);
+				}
 				const direction = getNavigationDirection(event.previousSlide, event.currentSlide);
 				if (direction) {
 					bumpControl(direction);
 				}
 
 				updateHelperTip();
+				syncTransposedOverview();
+			});
+
+			window.addEventListener('resize', () => {
+				requestAnimationFrame(() => {
+					syncTransposedOverview();
+				});
 			});
 
 			updateHelperTip();
