@@ -23,6 +23,10 @@ export default defineConfig({
 				replacement: resolve(__dirname, 'js/transposed/controllers/overview.js'),
 			},
 			{
+				find: './controllers/touch',
+				replacement: resolve(__dirname, 'js/transposed/controllers/touch.js'),
+			},
+			{
 				find: 'reveal.js/plugin',
 				replacement: '/plugin',
 			},

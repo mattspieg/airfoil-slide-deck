@@ -459,6 +459,178 @@
 				}
 			}
 
+			const mobileSwipeState = {
+				startX: 0,
+				startY: 0,
+				active: false,
+				navigated: false,
+			};
+
+			function measureViewportUnit(unit) {
+				const probe = document.createElement('div');
+				probe.style.position = 'fixed';
+				probe.style.left = '0';
+				probe.style.top = '0';
+				probe.style.width = '1px';
+				probe.style.height = `100${unit}`;
+				probe.style.pointerEvents = 'none';
+				probe.style.opacity = '0';
+				document.body.appendChild(probe);
+				const height = probe.getBoundingClientRect().height;
+				probe.remove();
+				return height;
+			}
+
+			function logDirectionalLayoutMetrics(reason) {
+				const html = document.documentElement;
+				const body = document.body;
+				const revealElement = Reveal.getRevealElement?.() || document.querySelector('.reveal');
+				const slidesElement = Reveal.getSlidesElement?.() || document.querySelector('.slides');
+				const viewportElement = Reveal.getViewportElement?.() || body;
+				const presentSlide = document.querySelector('.slides section.present:not(.stack), .slides > section.present');
+				const htmlRect = html.getBoundingClientRect();
+				const bodyRect = body.getBoundingClientRect();
+				const viewportRect = viewportElement?.getBoundingClientRect?.();
+				const revealRect = revealElement?.getBoundingClientRect?.();
+				const slidesRect = slidesElement?.getBoundingClientRect?.();
+				const presentRect = presentSlide?.getBoundingClientRect?.();
+
+				console.log('[directional layout]', reason, {
+					deckMode,
+					isMobileDeck,
+					isScrollView: Reveal.isScrollView?.() || false,
+					indices: getLogicalIndices(),
+					window: {
+						innerWidth: window.innerWidth,
+						innerHeight: window.innerHeight,
+					},
+					visualViewport: window.visualViewport ? {
+						width: window.visualViewport.width,
+						height: window.visualViewport.height,
+						offsetTop: window.visualViewport.offsetTop,
+						offsetLeft: window.visualViewport.offsetLeft,
+						scale: window.visualViewport.scale,
+					} : null,
+					units: {
+						vh: measureViewportUnit('vh'),
+						dvh: measureViewportUnit('dvh'),
+						svh: measureViewportUnit('svh'),
+						lvh: measureViewportUnit('lvh'),
+						htmlVhVar: html.style.getPropertyValue('--vh') || null,
+					},
+					classes: {
+						html: html.className,
+						body: body.className,
+						reveal: revealElement?.className || null,
+					},
+					htmlRect: {
+						width: htmlRect.width,
+						height: htmlRect.height,
+					},
+					bodyRect: {
+						width: bodyRect.width,
+						height: bodyRect.height,
+					},
+					viewportRect: viewportRect ? {
+						top: viewportRect.top,
+						left: viewportRect.left,
+						width: viewportRect.width,
+						height: viewportRect.height,
+						bottom: viewportRect.bottom,
+						right: viewportRect.right,
+					} : null,
+					revealRect: revealRect ? {
+						top: revealRect.top,
+						left: revealRect.left,
+						width: revealRect.width,
+						height: revealRect.height,
+						bottom: revealRect.bottom,
+						right: revealRect.right,
+					} : null,
+					slidesRect: slidesRect ? {
+						top: slidesRect.top,
+						left: slidesRect.left,
+						width: slidesRect.width,
+						height: slidesRect.height,
+						bottom: slidesRect.bottom,
+						right: slidesRect.right,
+					} : null,
+					presentRect: presentRect ? {
+						top: presentRect.top,
+						left: presentRect.left,
+						width: presentRect.width,
+						height: presentRect.height,
+						bottom: presentRect.bottom,
+						right: presentRect.right,
+					} : null,
+					overflowVsViewport: presentRect && viewportRect ? {
+						top: presentRect.top - viewportRect.top,
+						left: presentRect.left - viewportRect.left,
+						right: presentRect.right - viewportRect.right,
+						bottom: presentRect.bottom - viewportRect.bottom,
+					} : null,
+					overflowVsReveal: presentRect && revealRect ? {
+						top: presentRect.top - revealRect.top,
+						left: presentRect.left - revealRect.left,
+						right: presentRect.right - revealRect.right,
+						bottom: presentRect.bottom - revealRect.bottom,
+					} : null,
+				});
+			}
+
+			function handleMobileTouchStart(event) {
+				if (!isMobileDeck || !event.touches || event.touches.length !== 1) {
+					return;
+				}
+
+				const touch = event.touches[0];
+				mobileSwipeState.startX = touch.clientX;
+				mobileSwipeState.startY = touch.clientY;
+				mobileSwipeState.active = true;
+				mobileSwipeState.navigated = false;
+			}
+
+			function handleMobileTouchMove(event) {
+				if (!isMobileDeck || !mobileSwipeState.active || mobileSwipeState.navigated || !event.touches || event.touches.length !== 1) {
+					return;
+				}
+
+				const touch = event.touches[0];
+				const deltaX = touch.clientX - mobileSwipeState.startX;
+				const deltaY = touch.clientY - mobileSwipeState.startY;
+				const absX = Math.abs(deltaX);
+				const absY = Math.abs(deltaY);
+				const swipeThreshold = 40;
+				let direction = null;
+
+				if (absX > swipeThreshold && absX > absY) {
+					direction = deltaX < 0 ? 'right' : 'left';
+				}
+				else if (absY > swipeThreshold && absY > absX) {
+					direction = deltaY < 0 ? 'down' : 'up';
+				}
+
+				if (!direction) {
+					return;
+				}
+
+				const routes = getLogicalAvailableRoutes();
+				if (!routes[direction]) {
+					mobileSwipeState.navigated = true;
+					event.preventDefault();
+					return;
+				}
+
+				mobileSwipeState.navigated = true;
+				navigateLogical(direction);
+				event.preventDefault();
+			}
+
+			function handleMobileTouchEnd() {
+				mobileSwipeState.active = false;
+				mobileSwipeState.navigated = false;
+			}
+
 			function getOverviewMetrics() {
 				const margin = 140;
 				const slideSize = Reveal.getComputedSlideSize();
@@ -797,6 +969,7 @@
 				progress: false,
 				center: false,
 				overview: false,
+				touch: false,
 				zoom: false,
 				transition: 'fade',
 				transitionSpeed: 'fast',
@@ -855,6 +1028,14 @@
 			window.revealDeck = transposedDeck;
 			installTransposedOverviewHooks();
 
+			if (isMobileDeck) {
+				const revealElement = Reveal.getRevealElement();
+				revealElement.addEventListener('touchstart', handleMobileTouchStart, { passive: true });
+				revealElement.addEventListener('touchmove', handleMobileTouchMove, { passive: false });
+				revealElement.addEventListener('touchend', handleMobileTouchEnd, { passive: true });
+				revealElement.addEventListener('touchcancel', handleMobileTouchEnd, { passive: true });
+			}
+
 			if (isDualMode) {
 				Reveal.on('ready', () => {
 					if (isOverviewDeck) {
@@ -887,6 +1068,9 @@
 			Reveal.on('ready', () => {
 				updateHelperTip();
 				syncTransposedOverview();
+				requestAnimationFrame(() => {
+					logDirectionalLayoutMetrics('ready');
+				});
 			});
 			Reveal.on('overviewshown', () => {
 				updateHelperTip();
@@ -909,11 +1093,20 @@
 
 				updateHelperTip();
 				syncTransposedOverview();
+				requestAnimationFrame(() => {
+					logDirectionalLayoutMetrics('slidechanged');
+				});
 			});
 
 			window.addEventListener('resize', () => {
 				requestAnimationFrame(() => {
 					syncTransposedOverview();
+					logDirectionalLayoutMetrics('resize');
+				});
+			});
+			window.visualViewport?.addEventListener('resize', () => {
+				requestAnimationFrame(() => {
+					logDirectionalLayoutMetrics('visualViewport-resize');
 				});
 			});
 

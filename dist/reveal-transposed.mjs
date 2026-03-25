@@ -2439,24 +2439,14 @@ class Ji {
   constructor(e) {
     this.Reveal = e, this.touchStartX = 0, this.touchStartY = 0, this.touchStartCount = 0, this.touchCaptured = !1, this.onPointerDown = this.onPointerDown.bind(this), this.onPointerMove = this.onPointerMove.bind(this), this.onPointerUp = this.onPointerUp.bind(this), this.onTouchStart = this.onTouchStart.bind(this), this.onTouchMove = this.onTouchMove.bind(this), this.onTouchEnd = this.onTouchEnd.bind(this);
   }
-  /**
-   *
-   */
   bind() {
     let e = this.Reveal.getRevealElement();
     "onpointerdown" in window ? (e.addEventListener("pointerdown", this.onPointerDown, !1), e.addEventListener("pointermove", this.onPointerMove, !1), e.addEventListener("pointerup", this.onPointerUp, !1)) : window.navigator.msPointerEnabled ? (e.addEventListener("MSPointerDown", this.onPointerDown, !1), e.addEventListener("MSPointerMove", this.onPointerMove, !1), e.addEventListener("MSPointerUp", this.onPointerUp, !1)) : (e.addEventListener("touchstart", this.onTouchStart, !1), e.addEventListener("touchmove", this.onTouchMove, !1), e.addEventListener("touchend", this.onTouchEnd, !1));
   }
-  /**
-   *
-   */
   unbind() {
     let e = this.Reveal.getRevealElement();
     e.removeEventListener("pointerdown", this.onPointerDown, !1), e.removeEventListener("pointermove", this.onPointerMove, !1), e.removeEventListener("pointerup", this.onPointerUp, !1), e.removeEventListener("MSPointerDown", this.onPointerDown, !1), e.removeEventListener("MSPointerMove", this.onPointerMove, !1), e.removeEventListener("MSPointerUp", this.onPointerUp, !1), e.removeEventListener("touchstart", this.onTouchStart, !1), e.removeEventListener("touchmove", this.onTouchMove, !1), e.removeEventListener("touchend", this.onTouchEnd, !1);
   }
-  /**
-   * Checks if the target element prevents the triggering of
-   * swipe navigation.
-   */
   isSwipePrevented(e) {
     if (xe(e, "video[controls], audio[controls]")) return !0;
     for (; e && typeof e.hasAttribute == "function"; ) {
@@ -2465,21 +2455,10 @@ class Ji {
     }
     return !1;
   }
-  /**
-   * Handler for the 'touchstart' event, enables support for
-   * swipe and pinch gestures.
-   *
-   * @param {object} event
-   */
   onTouchStart(e) {
     if (this.touchCaptured = !1, this.isSwipePrevented(e.target)) return !0;
     this.touchStartX = e.touches[0].clientX, this.touchStartY = e.touches[0].clientY, this.touchStartCount = e.touches.length;
   }
-  /**
-   * Handler for the 'touchmove' event.
-   *
-   * @param {object} event
-   */
   onTouchMove(e) {
     if (this.isSwipePrevented(e.target)) return !0;
     let t = this.Reveal.getConfig();
@@ -2490,39 +2469,19 @@ class Ji {
       let i = e.touches[0].clientX, s = e.touches[0].clientY;
       if (e.touches.length === 1 && this.touchStartCount !== 2) {
         let a = this.Reveal.availableRoutes({ includeFragments: !0 }), n = i - this.touchStartX, o = s - this.touchStartY;
-        n > Te && Math.abs(n) > Math.abs(o) ? (this.touchCaptured = !0, t.navigationMode === "linear" ? t.rtl ? this.Reveal.next() : this.Reveal.prev() : this.Reveal.left()) : n < -Te && Math.abs(n) > Math.abs(o) ? (this.touchCaptured = !0, t.navigationMode === "linear" ? t.rtl ? this.Reveal.prev() : this.Reveal.next() : this.Reveal.right()) : o > Te && a.up ? (this.touchCaptured = !0, t.navigationMode === "linear" ? this.Reveal.prev() : this.Reveal.up()) : o < -Te && a.down && (this.touchCaptured = !0, t.navigationMode === "linear" ? this.Reveal.next() : this.Reveal.down()), t.embedded ? (this.touchCaptured || this.Reveal.isVerticalSlide()) && e.preventDefault() : e.preventDefault();
+        n > Te && Math.abs(n) > Math.abs(o) ? (this.touchCaptured = !0, t.navigationMode === "linear" ? t.rtl ? this.Reveal.next() : this.Reveal.prev() : this.Reveal.up()) : n < -Te && Math.abs(n) > Math.abs(o) ? (this.touchCaptured = !0, t.navigationMode === "linear" ? t.rtl ? this.Reveal.prev() : this.Reveal.next() : this.Reveal.down()) : o > Te && a.up ? (this.touchCaptured = !0, t.navigationMode === "linear" ? this.Reveal.prev() : this.Reveal.left()) : o < -Te && a.down && (this.touchCaptured = !0, t.navigationMode === "linear" ? this.Reveal.next() : this.Reveal.right()), t.embedded ? (this.touchCaptured || this.Reveal.isVerticalSlide()) && e.preventDefault() : e.preventDefault();
       }
     }
   }
-  /**
-   * Handler for the 'touchend' event.
-   *
-   * @param {object} event
-   */
   onTouchEnd(e) {
     this.touchCaptured && !this.Reveal.slideContent.isAllowedToPlayAudio() && this.Reveal.startEmbeddedContent(this.Reveal.getCurrentSlide()), this.touchCaptured = !1;
   }
-  /**
-   * Convert pointer down to touch start.
-   *
-   * @param {object} event
-   */
   onPointerDown(e) {
     (e.pointerType === e.MSPOINTER_TYPE_TOUCH || e.pointerType === "touch") && (e.touches = [{ clientX: e.clientX, clientY: e.clientY }], this.onTouchStart(e));
   }
-  /**
-   * Convert pointer move to touch move.
-   *
-   * @param {object} event
-   */
   onPointerMove(e) {
     (e.pointerType === e.MSPOINTER_TYPE_TOUCH || e.pointerType === "touch") && (e.touches = [{ clientX: e.clientX, clientY: e.clientY }], this.onTouchMove(e));
   }
-  /**
-   * Convert pointer up to touch end.
-   *
-   * @param {object} event
-   */
   onPointerUp(e) {
     (e.pointerType === e.MSPOINTER_TYPE_TOUCH || e.pointerType === "touch") && (e.touches = [{ clientX: e.clientX, clientY: e.clientY }], this.onTouchEnd(e));
   }

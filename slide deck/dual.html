@@ -48,8 +48,8 @@
 
 			.stage {
 				position: relative;
-				width: 100vw;
-				height: 100vh;
+				width: 100%;
+				height: 100%;
 				overflow: hidden;
 				background: #191919;
 			}
@@ -395,7 +395,7 @@
 			}
 		</style>
 	</head>
-	<body class="mode-normal">
+		<body class="mode-normal">
 		<div class="stage">
 			<iframe
 				class="deck-frame deck-frame--normal"
@@ -491,6 +491,7 @@
 		<script type="module">
 			const normalFrame = document.getElementById('normal-frame');
 			const overviewFrame = document.getElementById('overview-frame');
+			const stage = document.querySelector('.stage');
 			const modeToggle = document.getElementById('mode-toggle');
 			const helpToggle = document.getElementById('help-toggle');
 			const helpOverlay = document.getElementById('help-overlay');
@@ -504,6 +505,115 @@
 			const isMobileDeck =
 				/(iphone|ipod|ipad|android)/gi.test(navigator.userAgent) ||
 				(navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+			const hashState = {
+				applying: false,
+				lastSerialized: null,
+				mobileBound: false,
+			};
+			const slideCount = 62;
+			const groupStarts = [1, 2, 8, 14, 19, 24, 29, 34, 39, 44, 49, 54, 58];
+			const groupSizes = groupStarts.map((start, index) => {
+				const end = index + 1 < groupStarts.length ? groupStarts[index + 1] - 1 : slideCount;
+				return end - start + 1;
+			});
+
+			function parseDeckHash() {
+				const match = window.location.hash.match(/^#\/(\d+)$/);
+				if (!match) {
+					return null;
+				}
+
+				let flatIndex = Math.max(0, Number(match[1] || 1) - 1);
+				let groupIndex = 0;
+
+				while (groupIndex < groupSizes.length) {
+					const groupSize = groupSizes[groupIndex];
+					if (flatIndex < groupSize) {
+						return {
+							h: flatIndex,
+							v: groupIndex,
+							f: 0,
+						};
+					}
+
+					flatIndex -= groupSize;
+					groupIndex += 1;
+				}
+
+				const lastGroupIndex = Math.max(0, groupSizes.length - 1);
+				return {
+					h: Math.max(0, (groupSizes[lastGroupIndex] || 1) - 1),
+					v: lastGroupIndex,
+					f: 0,
+				};
+			}
+
+			function serializeDeckHash(indices) {
+				const h = Math.max(0, Number(indices?.h || 0));
+				const v = Math.max(0, Number(indices?.v || 0));
+				let flatIndex = h;
+
+				for (let groupIndex = 0; groupIndex < v; groupIndex += 1) {
+					flatIndex += groupSizes[groupIndex] || 0;
+				}
+
+				return `#/${flatIndex + 1}`;
+			}
+
+			function replaceDeckHash(indices) {
+				if (hashState.applying) {
+					return;
+				}
+
+				const nextHash = serializeDeckHash(indices);
+				if (nextHash === hashState.lastSerialized && window.location.hash === nextHash) {
+					return;
+				}
+
+				hashState.lastSerialized = nextHash;
+				history.replaceState(null, '', `${window.location.pathname}${window.location.search}${nextHash}`);
+			}
+
+			function applyHashToDeck(deck, indices) {
+				if (!deck || !indices) {
+					return;
+				}
+
+				hashState.applying = true;
+				deck.slide(indices.h, indices.v, indices.f || 0);
+				requestAnimationFrame(() => {
+					hashState.applying = false;
+				});
+			}
+
+			function bindMobileHashSync() {
+				if (!isMobileDeck || hashState.mobileBound) {
+					return;
+				}
+
+				const deck = normalFrame.contentWindow?.revealDeck;
+				if (!deck || typeof deck.on !== 'function') {
+					return;
+				}
+
+				hashState.mobileBound = true;
+
+				deck.on('ready', () => {
+					const initialHash = parseDeckHash();
+					if (initialHash) {
+						applyHashToDeck(deck, initialHash);
+					}
+					else if (typeof deck.getIndices === 'function') {
+						replaceDeckHash(deck.getIndices());
+					}
+				});
+
+				deck.on('slidechanged', () => {
+					if (typeof deck.getIndices === 'function') {
+						replaceDeckHash(deck.getIndices());
+					}
+				});
+			}
 
 			if (isMobileDeck) {
 				document.body.classList.add('is-mobile-deck', 'ready');
@@ -511,6 +621,20 @@
 				overviewFrame.remove();
 				toolbar?.remove();
 				helpOverlay.remove();
+				normalFrame.addEventListener('load', () => {
+					requestAnimationFrame(() => {
+						bindMobileHashSync();
+					});
+				}, { once: true });
+				window.addEventListener('hashchange', () => {
+					const nextHash = parseDeckHash();
+					if (!nextHash) {
+						return;
+					}
+
+					const deck = normalFrame.contentWindow?.revealDeck;
+					applyHashToDeck(deck, nextHash);
+				});
 			}
 			else {
 				normalFrame.src = './directional.html?mode=normal';
@@ -521,6 +645,7 @@
 				const state = {
 				activeMode: 'normal',
 				transitionProgress: 0,
+				initialHashApplied: false,
 				ready: {
 					normal: false,
 					overview: false,
@@ -561,6 +686,134 @@
 				overviewInactive: 5,
 				};
 				const clickZoomDuration = 1120;
+
+				function measureViewportUnit(unit) {
+					const probe = document.createElement('div');
+					probe.style.position = 'fixed';
+					probe.style.left = '0';
+					probe.style.top = '0';
+					probe.style.width = '1px';
+					probe.style.height = `100${unit}`;
+					probe.style.pointerEvents = 'none';
+					probe.style.opacity = '0';
+					document.body.appendChild(probe);
+					const height = probe.getBoundingClientRect().height;
+					probe.remove();
+					return height;
+				}
+
+				function getViewportDebugMetrics() {
+					return {
+						innerWidth: window.innerWidth,
+						innerHeight: window.innerHeight,
+						clientWidth: document.documentElement.clientWidth,
+						clientHeight: document.documentElement.clientHeight,
+						visualViewport: window.visualViewport ? {
+							width: window.visualViewport.width,
+							height: window.visualViewport.height,
+							offsetTop: window.visualViewport.offsetTop,
+							offsetLeft: window.visualViewport.offsetLeft,
+							scale: window.visualViewport.scale,
+						} : null,
+						vh: measureViewportUnit('vh'),
+						dvh: measureViewportUnit('dvh'),
+						svh: measureViewportUnit('svh'),
+						lvh: measureViewportUnit('lvh'),
+					};
+				}
+
+				function logDualLayoutMetrics(reason) {
+					const stageRect = stage?.getBoundingClientRect();
+					const normalFrameRect = normalFrame?.getBoundingClientRect();
+					const overviewFrameRect = overviewFrame?.getBoundingClientRect();
+					const normalChildWindow = normalFrame?.contentWindow;
+					const normalChildDoc = normalChildWindow?.document;
+					const childReveal = normalChildDoc?.querySelector('.reveal');
+					const childSlides = normalChildDoc?.querySelector('.slides');
+					const childPresentSlide = normalChildDoc?.querySelector('.slides section.present:not(.stack), .slides > section.present');
+					const childBody = normalChildDoc?.body;
+					const childRevealRect = childReveal?.getBoundingClientRect?.();
+					const childSlidesRect = childSlides?.getBoundingClientRect?.();
+					const childPresentRect = childPresentSlide?.getBoundingClientRect?.();
+					const childBodyRect = childBody?.getBoundingClientRect?.();
+
+					console.log('[dual layout]', reason, {
+						activeMode: state.activeMode,
+						isMobileDeck,
+						parentViewport: getViewportDebugMetrics(),
+						stageRect: stageRect ? {
+							top: stageRect.top,
+							left: stageRect.left,
+							width: stageRect.width,
+							height: stageRect.height,
+							bottom: stageRect.bottom,
+							right: stageRect.right,
+						} : null,
+						normalFrameRect: normalFrameRect ? {
+							top: normalFrameRect.top,
+							left: normalFrameRect.left,
+							width: normalFrameRect.width,
+							height: normalFrameRect.height,
+							bottom: normalFrameRect.bottom,
+							right: normalFrameRect.right,
+						} : null,
+						overviewFrameRect: overviewFrameRect ? {
+							top: overviewFrameRect.top,
+							left: overviewFrameRect.left,
+							width: overviewFrameRect.width,
+							height: overviewFrameRect.height,
+							bottom: overviewFrameRect.bottom,
+							right: overviewFrameRect.right,
+						} : null,
+						childViewport: normalChildWindow ? {
+							innerWidth: normalChildWindow.innerWidth,
+							innerHeight: normalChildWindow.innerHeight,
+							clientWidth: normalChildDoc?.documentElement?.clientWidth,
+							clientHeight: normalChildDoc?.documentElement?.clientHeight,
+							htmlVhVar: normalChildDoc?.documentElement?.style?.getPropertyValue('--vh') || null,
+						} : null,
+						childBodyClass: childBody?.className || null,
+						childRevealClass: childReveal?.className || null,
+						childBodyRect: childBodyRect ? {
+							top: childBodyRect.top,
+							left: childBodyRect.left,
+							width: childBodyRect.width,
+							height: childBodyRect.height,
+							bottom: childBodyRect.bottom,
+							right: childBodyRect.right,
+						} : null,
+						childRevealRect: childRevealRect ? {
+							top: childRevealRect.top,
+							left: childRevealRect.left,
+							width: childRevealRect.width,
+							height: childRevealRect.height,
+							bottom: childRevealRect.bottom,
+							right: childRevealRect.right,
+						} : null,
+						childSlidesRect: childSlidesRect ? {
+							top: childSlidesRect.top,
+							left: childSlidesRect.left,
+							width: childSlidesRect.width,
+							height: childSlidesRect.height,
+							bottom: childSlidesRect.bottom,
+							right: childSlidesRect.right,
+						} : null,
+						childPresentRect: childPresentRect ? {
+							top: childPresentRect.top,
+							left: childPresentRect.left,
+							width: childPresentRect.width,
+							height: childPresentRect.height,
+							bottom: childPresentRect.bottom,
+							right: childPresentRect.right,
+						} : null,
+						overflow: childPresentRect && childRevealRect ? {
+							top: childPresentRect.top - childRevealRect.top,
+							left: childPresentRect.left - childRevealRect.left,
+							right: childPresentRect.right - childRevealRect.right,
+							bottom: childPresentRect.bottom - childRevealRect.bottom,
+						} : null,
+					});
+				}
 
 				function getPlatformZoomConfig() {
 				const platform = navigator.userAgentData?.platform || navigator.platform || navigator.userAgent || '';
@@ -900,6 +1153,10 @@
 				if (syncInactive) {
 					syncInactiveDeck();
 				}
+
+				requestAnimationFrame(() => {
+					logDualLayoutMetrics(`setMode:${mode}`);
+				});
 			}
 
 			function syncDeck(mode, indices) {
@@ -919,6 +1176,26 @@
 				const activeIndices = state.lastIndices[state.activeMode];
 				const inactiveMode = state.activeMode === 'normal' ? 'overview' : 'normal';
 				syncDeck(inactiveMode, activeIndices);
+			}
+
+			function applyInitialHashIfNeeded() {
+				if (state.initialHashApplied || !state.ready.normal || !state.ready.overview) {
+					return;
+				}
+
+				state.initialHashApplied = true;
+				const initialHash = parseDeckHash();
+
+				if (initialHash) {
+					state.lastIndices.normal = initialHash;
+					state.lastIndices.overview = initialHash;
+					syncDeck('normal', initialHash);
+					syncDeck('overview', initialHash);
+					replaceDeckHash(initialHash);
+				}
+				else {
+					replaceDeckHash(state.lastIndices.normal);
+				}
 			}
 
 				helpToggle.addEventListener('click', () => {
@@ -975,6 +1252,10 @@
 					if (state.ready.normal && state.ready.overview) {
 						document.body.classList.add('ready');
 						syncInactiveDeck();
+						applyInitialHashIfNeeded();
+						requestAnimationFrame(() => {
+							logDualLayoutMetrics('both-ready');
+						});
 					}
 
 					return;
@@ -991,6 +1272,13 @@
 						const inactiveMode = data.mode === 'normal' ? 'overview' : 'normal';
 						syncDeck(inactiveMode, state.lastIndices[data.mode]);
 					}
+					if (data.mode === state.activeMode) {
+						replaceDeckHash(state.lastIndices[data.mode]);
+					}
+
+					requestAnimationFrame(() => {
+						logDualLayoutMetrics(`slidechanged:${data.mode}`);
+					});
 
 					return;
 				}
@@ -1049,6 +1337,27 @@
 			});
 
 				applyTransitionProgress(0);
+				window.addEventListener('resize', () => {
+					requestAnimationFrame(() => {
+						logDualLayoutMetrics('parent-resize');
+					});
+				});
+				window.visualViewport?.addEventListener('resize', () => {
+					requestAnimationFrame(() => {
+						logDualLayoutMetrics('parent-visualViewport-resize');
+					});
+				});
+				window.addEventListener('hashchange', () => {
+					const nextHash = parseDeckHash();
+					if (!nextHash) {
+						return;
+					}
+
+					state.lastIndices.normal = nextHash;
+					state.lastIndices.overview = nextHash;
+					syncDeck('normal', nextHash);
+					syncDeck('overview', nextHash);
+				});
 			}
 		</script>
 	</body>
