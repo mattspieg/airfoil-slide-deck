@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Trackpad Swipe Left</title>
+		<style>
+			:root {
+				--panel-shadow:
+					inset 0 1px 0 rgba(255, 255, 255, 0.08),
+					inset 0 -24px 40px rgba(255, 255, 255, 0.02),
+					0 24px 80px rgba(0, 0, 0, 0.55);
+				--trackpad-stroke: rgba(255, 255, 255, 0.34);
+				--finger: #ffffff;
+				--finger-outline: rgba(255, 255, 255, 0.72);
+				--trail-core: rgba(255, 255, 255, 0.42);
+				--trail-soft: rgba(255, 255, 255, 0);
+				--duration: 3.8s;
+				--ease: cubic-bezier(0.4, 0, 0.2, 1);
+			}
+
+			* { box-sizing: border-box; }
+			html, body {
+				height: 100%;
+				margin: 0;
+				font-family: "SF Pro Display", "Segoe UI", sans-serif;
+				background: transparent;
+			}
+			body { display: grid; place-items: center; padding: 0; }
+			.trackpad {
+				position: relative;
+				width: 41%;
+				aspect-ratio: 1.36;
+				border: 4px solid var(--trackpad-stroke);
+				border-radius: 28px;
+				background: rgba(255,255,255,.01);
+				box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 2px 8px rgba(0,0,0,.16);
+			}
+			.gesture { position: absolute; inset: 0; }
+			.finger {
+				position: absolute;
+				width: 32px;
+				height: 32px;
+				border-radius: 999px;
+				border: 2px solid var(--finger-outline);
+				background: transparent;
+				animation: swipe-left var(--duration) var(--ease) infinite;
+			}
+			.finger::before {
+				content: "";
+				position: absolute;
+				left: 50%;
+				top: 50%;
+				width: 40px;
+				height: 32px;
+				transform: translate(0, -50%);
+				border-radius: 999px 0 0 999px;
+				background: linear-gradient(90deg, var(--trail-soft) 0%, var(--trail-core) 100%);
+				filter: blur(2px);
+				clip-path: inset(0 -8px 0 -8px round 999px 0 0 999px);
+				opacity: 0;
+				animation: trail-left var(--duration) ease-in-out infinite;
+			}
+			.finger::after {
+				content: "";
+				position: absolute;
+				inset: 0;
+				border-radius: 999px;
+				background: var(--finger);
+				opacity: 0;
+				animation: fill-state var(--duration) linear infinite;
+			}
+			.finger.top { left: 72%; top: 38%; }
+			.finger.bottom { left: 72%; top: 54%; }
+			@keyframes swipe-left {
+				0% { transform: translateX(0); opacity: 0; }
+				12% { transform: translateX(0); opacity: .3; }
+				22% { transform: translateX(0); opacity: 1; }
+				42% { transform: translateX(-40px); opacity: 1; }
+				74% { transform: translateX(-40px); opacity: 1; }
+				90% { transform: translateX(-40px); opacity: .16; }
+				100% { transform: translateX(-40px); opacity: 0; }
+			}
+			@keyframes fill-state {
+				0%, 14%, 82%, 100% { opacity: 0; }
+				18%, 74% { opacity: 1; }
+			}
+			@keyframes trail-left {
+				0%, 22% { opacity: 0; width: 0; }
+				24% { opacity: .45; width: 10px; }
+				32% { opacity: .78; width: 28px; }
+				44% { opacity: .28; width: 10px; }
+				52%, 100% { opacity: 0; width: 0; }
+			}
+			@media (max-width: 640px) {
+				.trackpad { width: 52%; border-width: 3px; }
+				.finger { width: 18px; height: 18px; }
+				.finger::before { height: 18px; }
+			}
+		</style>
+	</head>
+	<body>
+		<div class="trackpad" aria-label="Trackpad swipe left animation">
+			<div class="gesture" aria-hidden="true">
+				<div class="finger top"></div>
+				<div class="finger bottom"></div>
+			</div>
+		</div>
+	</body>
+</html>

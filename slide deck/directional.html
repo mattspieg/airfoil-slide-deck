@@ -661,7 +661,7 @@
 
 			if (isDualMode) {
 				document.addEventListener('keydown', (event) => {
-					if (event.key === 'o' || event.key === 'O' || event.key === 'Escape') {
+					if (event.key === 'Escape') {
 						event.preventDefault();
 						event.stopImmediatePropagation();
 						notifyParent('toggle-request');
@@ -765,10 +765,13 @@
 				38: () => {},
 				39: () => {},
 				40: () => {},
+				70: () => {},
 				72: () => {},
 				74: () => {},
 				75: () => {},
 				76: () => {},
+				78: () => {},
+				80: () => {},
 			};
 
 			Reveal.initialize(isDualMode ? {

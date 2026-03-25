@@ -179,7 +179,7 @@
 			}
 
 			.help-panel {
-				width: min(720px, calc(100vw - 48px));
+				width: min(1240px, calc(100vw - 48px));
 				max-height: calc(100vh - 48px);
 				overflow: auto;
 				border-radius: 24px;
@@ -205,61 +205,157 @@
 				letter-spacing: -0.02em;
 			}
 
+			.help-eyebrow {
+				margin: 0 0 8px;
+				color: rgba(255, 255, 255, 0.54);
+				font: 600 12px/1 Arial, Helvetica, sans-serif;
+				letter-spacing: 0.16em;
+				text-transform: uppercase;
+			}
+
 			.help-intro {
 				margin: 0 0 20px;
 				color: rgba(255, 255, 255, 0.72);
 				font: 15px/1.5 Arial, Helvetica, sans-serif;
 			}
 
-			.help-grid {
+			.help-layout {
 				display: grid;
-				grid-template-columns: repeat(2, minmax(0, 1fr));
-				gap: 18px;
+				grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+				gap: 28px;
+				align-items: start;
 			}
 
-			.help-section {
-				padding: 18px;
-				border-radius: 18px;
-				background: rgba(255, 255, 255, 0.07);
-				border: 1px solid rgba(255, 255, 255, 0.08);
+			.help-column {
+				min-width: 0;
 			}
 
-			.help-section h2 {
+			.help-column--trackpad {
+				padding-left: 28px;
+				border-left: 1px solid rgba(255, 255, 255, 0.1);
+			}
+
+			.help-column h2 {
 				margin: 0 0 12px;
 				font: 600 15px/1.2 Arial, Helvetica, sans-serif;
 				letter-spacing: 0.01em;
 				color: rgba(255, 255, 255, 0.88);
 			}
 
-			.help-list {
-				list-style: none;
-				margin: 0;
-				padding: 0;
+			.help-commands {
 				display: grid;
-				gap: 12px;
+				gap: 14px;
 			}
 
-			.help-item {
+			.help-command {
 				display: grid;
-				gap: 6px;
-			}
-
-			.help-kbd {
-				display: inline-flex;
+				grid-template-columns: 120px minmax(0, 1fr);
+				gap: 16px;
 				align-items: center;
-				width: fit-content;
-				padding: 6px 10px;
-				border-radius: 999px;
-				background: rgba(255, 255, 255, 0.1);
-				border: 1px solid rgba(255, 255, 255, 0.12);
-				font: 600 13px/1 Arial, Helvetica, sans-serif;
-				letter-spacing: 0.01em;
+				padding: 16px;
+				border-radius: 18px;
+				background: rgba(255, 255, 255, 0.07);
+				border: 1px solid rgba(255, 255, 255, 0.08);
+			}
+
+			.help-command-icon {
+				width: 100%;
+				max-width: 96px;
+				height: auto;
+				display: block;
+				opacity: 0.9;
+				filter: brightness(0) invert(1);
+			}
+
+			.help-command-title {
+				margin: 0 0 6px;
+				font: 600 16px/1.2 Arial, Helvetica, sans-serif;
 				color: #fff;
 			}
 
 			.help-copy {
+				margin: 0;
 				color: rgba(255, 255, 255, 0.72);
 				font: 14px/1.45 Arial, Helvetica, sans-serif;
+			}
+
+			.help-gesture-preview {
+				aspect-ratio: 16 / 10;
+				border-radius: 18px;
+				background: rgba(255, 255, 255, 0.07);
+				border: 1px solid rgba(255, 255, 255, 0.08);
+				overflow: hidden;
+				margin-bottom: 18px;
+			}
+
+			.help-gesture-preview iframe {
+				display: block;
+				width: 100%;
+				height: 100%;
+				border: 0;
+				pointer-events: none;
+			}
+
+			.help-gesture-list {
+				display: grid;
+				grid-template-columns: repeat(4, minmax(0, 1fr));
+				gap: 10px;
+			}
+
+			.help-gesture-tab {
+				position: relative;
+				display: grid;
+				gap: 6px;
+				padding: 10px 8px 14px;
+				border-radius: 14px;
+				background: rgba(255, 255, 255, 0.05);
+				border: 1px solid rgba(255, 255, 255, 0.08);
+				color: rgba(255, 255, 255, 0.86);
+				font: 600 13px/1.35 Arial, Helvetica, sans-serif;
+				text-align: center;
+				cursor: pointer;
+				overflow: hidden;
+				transition:
+					background 180ms ease,
+					border-color 180ms ease,
+					color 180ms ease;
+			}
+
+			.help-gesture-tab.is-active {
+				background: rgba(255, 255, 255, 0.1);
+				border-color: rgba(255, 255, 255, 0.18);
+				color: #fff;
+			}
+
+			.help-gesture-tab-progress {
+				position: absolute;
+				left: 2px;
+				right: 2px;
+				bottom: 0;
+				height: 3px;
+				border-radius: 0 0 12px 12px;
+				background: rgba(255, 255, 255, 0.1);
+				overflow: hidden;
+				pointer-events: none;
+			}
+
+			.help-gesture-tab-progress > span {
+				display: block;
+				height: 100%;
+				width: 0%;
+				border-radius: inherit;
+				background: rgba(255, 255, 255, 0.9);
+			}
+
+			.help-gesture-title {
+				margin: 0;
+				font: 600 13px/1.35 Arial, Helvetica, sans-serif;
+				color: rgba(255, 255, 255, 0.86);
+				text-align: center;
+				padding: 10px 8px;
+				border-radius: 14px;
+				background: rgba(255, 255, 255, 0.05);
+				border: 1px solid rgba(255, 255, 255, 0.08);
 			}
 
 			.help-note {
@@ -269,7 +365,7 @@
 			}
 
 			@media (max-width: 760px) {
-				.help-grid {
+				.help-layout {
 					grid-template-columns: 1fr;
 				}
 
@@ -280,6 +376,21 @@
 				.help-header {
 					align-items: flex-start;
 					flex-direction: column;
+				}
+
+				.help-column--trackpad {
+					padding-left: 0;
+					padding-top: 20px;
+					border-left: 0;
+					border-top: 1px solid rgba(255, 255, 255, 0.1);
+				}
+
+				.help-command {
+					grid-template-columns: 88px minmax(0, 1fr);
+				}
+
+				.help-gesture-list {
+					grid-template-columns: repeat(2, minmax(0, 1fr));
 				}
 			}
 		</style>
@@ -313,54 +424,65 @@
 		<div class="help-overlay" id="help-overlay" aria-hidden="true">
 			<section class="help-panel" role="dialog" aria-modal="true" aria-labelledby="help-title">
 				<div class="help-header">
-					<h1 id="help-title">Navigation help</h1>
+					<div>
+						<p class="help-eyebrow">Navigation</p>
+						<h1 id="help-title">Keyboard and trackpad</h1>
+					</div>
 					<button class="help-close" id="help-close" type="button">Close</button>
 				</div>
 				<p class="help-intro">
-					This deck supports trackpad gestures, overview mode, and zoom on the focused slide.
+					Use the keyboard or trackpad to move through the deck and toggle overview mode.
 				</p>
-				<div class="help-grid">
-					<section class="help-section">
-						<h2>Core controls</h2>
-						<ul class="help-list">
-							<li class="help-item">
-								<span class="help-kbd" id="help-zoom-kbd">Alt + click</span>
-								<span class="help-copy">Zoom into the focused slide.</span>
-							</li>
-							<li class="help-item">
-								<span class="help-kbd">Pinch on a trackpad</span>
-								<span class="help-copy">Move between focused mode and overview mode.</span>
-							</li>
-							<li class="help-item">
-								<span class="help-kbd">Escape</span>
-								<span class="help-copy">Toggle between focused mode and overview mode.</span>
-							</li>
-							<li class="help-item">
-								<span class="help-kbd">Arrow keys</span>
-								<span class="help-copy">Navigate left, right, up, and down through the deck.</span>
-							</li>
-						</ul>
+				<div class="help-layout">
+					<section class="help-column help-column--keyboard">
+						<h2>Keyboard</h2>
+						<div class="help-commands">
+							<article class="help-command">
+								<img class="help-command-icon" src="../examples/assets/arrow-keys.svg?v=2026-03-25-3" alt="" />
+								<div>
+									<h3 class="help-command-title">Arrow keys</h3>
+									<p class="help-copy">Navigate left, right, up, and down through the deck.</p>
+								</div>
+							</article>
+							<article class="help-command">
+								<img class="help-command-icon" src="../examples/assets/escape-key.svg?v=2026-03-25-3" alt="" />
+								<div>
+									<h3 class="help-command-title">Escape</h3>
+									<p class="help-copy">Toggle between deck overview and slide focus modes.</p>
+								</div>
+							</article>
+							<article class="help-command">
+								<img class="help-command-icon" id="help-zoom-icon" src="../examples/assets/option-zoom.svg?v=2026-03-25-3" alt="" />
+								<div>
+									<h3 class="help-command-title" id="help-zoom-title">Option + click</h3>
+									<p class="help-copy" id="help-zoom-copy">Zoom in to see finer detail.</p>
+								</div>
+							</article>
+						</div>
 					</section>
-					<section class="help-section">
-						<h2>More shortcuts</h2>
-						<ul class="help-list">
-							<li class="help-item">
-								<span class="help-kbd">O</span>
-								<span class="help-copy">Toggle overview mode directly.</span>
-							</li>
-							<li class="help-item">
-								<span class="help-kbd">Space / N</span>
-								<span class="help-copy">Move to the next slide.</span>
-							</li>
-							<li class="help-item">
-								<span class="help-kbd">Shift + Space / P</span>
-								<span class="help-copy">Move to the previous slide.</span>
-							</li>
-							<li class="help-item">
-								<span class="help-kbd">F / G</span>
-								<span class="help-copy">Fullscreen or jump to a slide.</span>
-							</li>
-						</ul>
+					<section class="help-column help-column--trackpad">
+						<h2>Trackpad</h2>
+						<div class="help-gesture-preview">
+							<iframe id="help-gesture-frame" src="../examples/trackpad-gesture.html?v=2026-03-25-6" title="Trackpad gesture preview" tabindex="-1"></iframe>
+						</div>
+						<div class="help-gesture-list" id="help-gesture-list">
+							<button class="help-gesture-tab is-active" type="button" data-gesture-src="../examples/trackpad-gesture.html?v=2026-03-25-6">
+								<span>Next project</span>
+								<span class="help-gesture-tab-progress"><span></span></span>
+							</button>
+							<button class="help-gesture-tab" type="button" data-gesture-src="../examples/trackpad-swipe-left.html?v=2026-03-25-6">
+								<span>More project work</span>
+								<span class="help-gesture-tab-progress"><span></span></span>
+							</button>
+							<button class="help-gesture-tab" type="button" data-gesture-src="../examples/trackpad-pinch-in.html?v=2026-03-25-6">
+								<span>Deck overview</span>
+								<span class="help-gesture-tab-progress"><span></span></span>
+							</button>
+							<button class="help-gesture-tab" type="button" data-gesture-src="../examples/trackpad-pinch-out.html?v=2026-03-25-6">
+								<span>Slide focus</span>
+								<span class="help-gesture-tab-progress"><span></span></span>
+							</button>
+						</div>
 					</section>
 				</div>
 			</section>
@@ -373,7 +495,11 @@
 			const helpToggle = document.getElementById('help-toggle');
 			const helpOverlay = document.getElementById('help-overlay');
 			const helpClose = document.getElementById('help-close');
-			const helpZoomKbd = document.getElementById('help-zoom-kbd');
+			const helpZoomTitle = document.getElementById('help-zoom-title');
+			const helpZoomCopy = document.getElementById('help-zoom-copy');
+			const helpZoomIcon = document.getElementById('help-zoom-icon');
+			const helpGestureFrame = document.getElementById('help-gesture-frame');
+			const helpGestureList = document.getElementById('help-gesture-list');
 			const toolbar = document.querySelector('.toolbar');
 			const isMobileDeck =
 				/(iphone|ipod|ipad|android)/gi.test(navigator.userAgent) ||
@@ -419,6 +545,13 @@
 					resetTimer: null,
 				},
 				clickZoomTimer: null,
+				gestureTabs: {
+					index: 0,
+					timer: null,
+					startAt: 0,
+					duration: 3800,
+					raf: null,
+				},
 				};
 
 				const scales = {
@@ -429,32 +562,118 @@
 				};
 				const clickZoomDuration = 1120;
 
-				function getPlatformModifierLabel() {
+				function getPlatformZoomConfig() {
 				const platform = navigator.userAgentData?.platform || navigator.platform || navigator.userAgent || '';
 
 				if (/Mac|iPhone|iPad|iPod/i.test(platform)) {
-					return 'Option + click';
+					return {
+						label: 'Option + click',
+						icon: '../examples/assets/option-zoom.svg?v=2026-03-25-3',
+						copy: 'Zoom in to see finer detail.',
+					};
 				}
 
 				if (/Linux/i.test(platform)) {
-					return 'Ctrl + click';
+					return {
+						label: 'Ctrl + click',
+						icon: '../examples/assets/ctrl-zoom.svg?v=2026-03-25-3',
+						copy: 'Zoom in to see finer detail.',
+					};
 				}
 
-				return 'Alt + click';
+				return {
+					label: 'Alt + click',
+					icon: '../examples/assets/alt-zoom.svg?v=2026-03-25-3',
+					copy: 'Zoom in to see finer detail.',
+				};
 			}
 
-				function setHelpOpen(isOpen) {
+				function setHelpOpen(isOpen, { restoreFocus = true } = {}) {
 				helpOverlay.classList.toggle('is-open', isOpen);
 				helpOverlay.setAttribute('aria-hidden', String(!isOpen));
 				helpToggle.setAttribute('aria-expanded', String(isOpen));
+				if (isOpen) {
+					startGestureTabs();
+				}
+				else {
+					stopGestureTabs();
+				}
 
 				if (isOpen) {
 					helpClose.focus();
 				}
-				else {
-					helpToggle.focus();
+				else if (restoreFocus) {
+					const activeFrame = getFrame(state.activeMode);
+					try {
+						activeFrame.focus();
+						activeFrame.contentWindow?.focus();
+						activeFrame.contentWindow?.document?.body?.focus();
+					}
+					catch (error) {
+						helpToggle.focus();
+					}
 				}
 			}
+
+				const platformZoomConfig = getPlatformZoomConfig();
+				helpZoomTitle.textContent = platformZoomConfig.label;
+				helpZoomCopy.textContent = platformZoomConfig.copy;
+				helpZoomIcon.src = platformZoomConfig.icon;
+
+				const gestureTabs = Array.from(helpGestureList.querySelectorAll('.help-gesture-tab'));
+
+				function renderGestureProgress() {
+				const now = performance.now();
+				const elapsed = now - state.gestureTabs.startAt;
+				const progress = Math.max(0, Math.min(1, elapsed / state.gestureTabs.duration));
+				gestureTabs.forEach((tab, index) => {
+					const bar = tab.querySelector('.help-gesture-tab-progress > span');
+					bar.style.width = index === state.gestureTabs.index ? `${progress * 100}%` : '0%';
+				});
+				if (helpOverlay.classList.contains('is-open')) {
+					state.gestureTabs.raf = requestAnimationFrame(renderGestureProgress);
+				}
+				}
+
+				function setGestureTab(index) {
+				state.gestureTabs.index = index;
+				state.gestureTabs.startAt = performance.now();
+				gestureTabs.forEach((tab, tabIndex) => {
+					tab.classList.toggle('is-active', tabIndex === index);
+					const bar = tab.querySelector('.help-gesture-tab-progress > span');
+					bar.style.width = tabIndex === index ? '0%' : '0%';
+				});
+				helpGestureFrame.src = gestureTabs[index].dataset.gestureSrc;
+				}
+
+				function stopGestureTabs() {
+				if (state.gestureTabs.timer) {
+					clearInterval(state.gestureTabs.timer);
+					state.gestureTabs.timer = null;
+				}
+				if (state.gestureTabs.raf) {
+					cancelAnimationFrame(state.gestureTabs.raf);
+					state.gestureTabs.raf = null;
+				}
+				}
+
+				function startGestureTabs() {
+				stopGestureTabs();
+				setGestureTab(state.gestureTabs.index);
+				state.gestureTabs.timer = setInterval(() => {
+					setGestureTab((state.gestureTabs.index + 1) % gestureTabs.length);
+				}, state.gestureTabs.duration);
+				state.gestureTabs.raf = requestAnimationFrame(renderGestureProgress);
+				}
+
+				gestureTabs.forEach((tab, index) => {
+				tab.addEventListener('click', () => {
+					setGestureTab(index);
+					if (helpOverlay.classList.contains('is-open')) {
+						startGestureTabs();
+					}
+				});
+				});
 
 				function clamp(value, min, max) {
 				return Math.min(max, Math.max(min, value));
@@ -702,8 +921,6 @@
 				syncDeck(inactiveMode, activeIndices);
 			}
 
-				helpZoomKbd.textContent = getPlatformModifierLabel();
-
 				helpToggle.addEventListener('click', () => {
 				setHelpOpen(!helpOverlay.classList.contains('is-open'));
 				});
@@ -725,6 +942,10 @@
 					setHelpOpen(false);
 				}
 				}, true);
+
+				requestAnimationFrame(() => {
+				setHelpOpen(true, { restoreFocus: false });
+				});
 
 			modeToggle.addEventListener('click', () => {
 				setMode(state.activeMode === 'normal' ? 'overview' : 'normal');

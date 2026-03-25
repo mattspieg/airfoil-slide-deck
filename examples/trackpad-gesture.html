@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Trackpad Swipe Up</title>
+		<style>
+			:root {
+				--bg: #020202;
+				--panel: #0b0b0b;
+				--panel-shadow:
+					inset 0 1px 0 rgba(255, 255, 255, 0.08),
+					inset 0 -24px 40px rgba(255, 255, 255, 0.02),
+					0 24px 80px rgba(0, 0, 0, 0.55);
+				--trackpad-stroke: rgba(255, 255, 255, 0.34);
+				--trackpad-stroke-active: rgba(255, 255, 255, 0.82);
+				--finger: #ffffff;
+				--finger-outline: rgba(255, 255, 255, 0.72);
+				--trail-core: rgba(255, 255, 255, 0.42);
+				--trail-mid: rgba(255, 255, 255, 0.18);
+				--trail-soft: rgba(255, 255, 255, 0);
+				--duration: 3.8s;
+				--ease: cubic-bezier(0.4, 0, 0.2, 1);
+			}
+
+			* {
+				box-sizing: border-box;
+			}
+
+			html,
+			body {
+				height: 100%;
+				margin: 0;
+				font-family:
+					"SF Pro Display",
+					"Segoe UI",
+					sans-serif;
+				background: transparent;
+				color: #f2f2f2;
+			}
+
+			body {
+				display: grid;
+				place-items: center;
+				padding: 0;
+			}
+
+			.trackpad {
+				position: relative;
+				width: 41%;
+				aspect-ratio: 1.36;
+				border: 4px solid var(--trackpad-stroke);
+				border-radius: 28px;
+				background: rgba(255, 255, 255, 0.01);
+				box-shadow:
+					inset 0 1px 0 rgba(255, 255, 255, 0.08),
+					0 2px 8px rgba(0, 0, 0, 0.16);
+			}
+
+			.finger {
+				position: absolute;
+				width: 40px;
+				height: 40px;
+				border-radius: 999px;
+				background: transparent;
+				border: 2px solid var(--finger-outline);
+				animation: finger-y var(--duration) var(--ease) infinite;
+			}
+
+			.finger::before {
+				content: "";
+				position: absolute;
+				left: 50%;
+				top: 50%;
+				width: 40px;
+				height: 74px;
+				transform: translate(-50%, 0);
+				border-radius: 0 0 999px 999px;
+				background: linear-gradient(
+					180deg,
+					var(--trail-core) 0%,
+					var(--trail-soft) 100%
+				);
+				filter: blur(2px);
+				clip-path: inset(-8px 0 -8px 0 round 0 0 999px 999px);
+				opacity: 0;
+				animation: trail-state var(--duration) ease-in-out infinite;
+			}
+
+			.finger::after {
+				content: "";
+				position: absolute;
+				inset: 0;
+				border-radius: 999px;
+				background: var(--finger);
+				opacity: 0;
+				animation: fill-state var(--duration) linear infinite;
+			}
+
+			.gesture {
+				position: absolute;
+				left: 50%;
+				bottom: 24px;
+				width: 112px;
+				height: calc(100% - 48px);
+				transform: translateX(-50%);
+			}
+
+			.finger.left {
+				left: 14px;
+				bottom: 0;
+			}
+
+			.finger.right {
+				right: 14px;
+				bottom: 0;
+			}
+
+			@keyframes finger-y {
+				0% {
+					transform: translateY(0);
+					opacity: 0;
+				}
+				12% {
+					transform: translateY(0);
+					opacity: 0.3;
+				}
+				22% {
+					transform: translateY(0);
+					opacity: 1;
+				}
+				42% {
+					transform: translateY(-46px);
+					opacity: 1;
+				}
+				74% {
+					transform: translateY(-46px);
+					opacity: 1;
+				}
+				90% {
+					transform: translateY(-46px);
+					opacity: 0.16;
+				}
+				100% {
+					transform: translateY(-46px);
+					opacity: 0;
+				}
+			}
+
+			@keyframes fill-state {
+				0%,
+				14%,
+				82%,
+				100% {
+					opacity: 0;
+				}
+				18%,
+				74% {
+					opacity: 1;
+				}
+			}
+
+			@keyframes trail-state {
+				0%, 22% {
+					opacity: 0;
+					height: 0;
+					width: 22px;
+				}
+				24% {
+					opacity: 0.55;
+					height: 12px;
+					width: 22px;
+				}
+				32% {
+					opacity: 0.95;
+					height: 34px;
+					width: 22px;
+				}
+				44% {
+					opacity: 0.34;
+					height: 14px;
+					width: 22px;
+				}
+				52%, 100% {
+					opacity: 0;
+					height: 0;
+					width: 22px;
+				}
+			}
+
+			@media (max-width: 640px) {
+				.trackpad {
+					width: 52%;
+					border-width: 3px;
+				}
+
+				.gesture {
+					width: 72px;
+				}
+
+				.finger {
+					width: 18px;
+					height: 18px;
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<div class="trackpad" aria-label="Trackpad gesture animation">
+			<div class="gesture" aria-hidden="true">
+				<div class="finger left"></div>
+				<div class="finger right"></div>
+			</div>
+		</div>
+	</body>
+</html>
