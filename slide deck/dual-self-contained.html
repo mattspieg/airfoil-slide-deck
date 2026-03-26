@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta
+			name="viewport"
+			content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+		/>
+
+		<title>Slide Deck Dual Self Contained</title>
+
+		<link
+			href="https://cdn.prod.website-files.com/61bacad64fa3d3896a3d7a01/63184291d8d8886792d26613_Airfoil%20Favicon.png"
+			rel="apple-touch-icon"
+		/>
+		<link
+			href="https://cdn.prod.website-files.com/61bacad64fa3d3896a3d7a01/6318426d8e85c83957122077_Airfoil%20Favicon%20(1)-5%20(dragged).png"
+			rel="shortcut icon"
+			type="image/x-icon"
+		/>
+
+	</head>
+	<body class="deck_shell">
+		<div class="deck_wrapper">
+			<div id="dual-self-contained-css" class="hide">
+				<link rel="stylesheet" href="./dual-self-contained-overrides.css" />
+				<style>
+			.deck_wrapper {
+				width: 100%;
+				height: 100%;
+			}
+
+			.deck_shell {
+				position: relative;
+				width: 100%;
+				height: 100%;
+				margin: 0;
+				overflow: hidden;
+				background: #191919;
+			}
+
+			.deck_stage {
+				position: relative;
+				width: 100%;
+				height: 100%;
+				overflow: hidden;
+				background: #191919;
+			}
+
+			.deck_frame {
+				position: absolute;
+				inset: 0;
+				width: 100%;
+				height: 100%;
+				border: 0;
+				background: #191919;
+				transform-origin: 50% 50%;
+				transition:
+					opacity 560ms cubic-bezier(0.22, 0.61, 0.36, 1),
+					transform 560ms cubic-bezier(0.22, 0.61, 0.36, 1);
+			}
+
+			.deck_frame-pinching {
+				transition: none;
+			}
+
+			.deck_frame-click-zoom {
+				transition:
+					opacity 1120ms cubic-bezier(0.22, 0.61, 0.36, 1),
+					transform 1120ms cubic-bezier(0, .325, .288, 1.017);
+			}
+
+			.deck_frame-pending {
+				opacity: 0;
+			}
+
+			.deck_frame-normal {
+				z-index: 2;
+			}
+
+			.deck_frame-overview {
+				z-index: 1;
+			}
+
+			.deck_toolbar {
+				position: fixed;
+				top: 1rem;
+				right: 1rem;
+				z-index: 20;
+				display: flex;
+				align-items: center;
+				gap: 0.625rem;
+			}
+
+			.deck_button {
+				border: 0;
+				border-radius: 999rem;
+				padding: 0.625rem 0.875rem;
+				min-height: 2.5rem;
+				background: rgba(0, 0, 0, 0.18);
+				color: #fff;
+				font-size: 0.875rem;
+				line-height: 1;
+				letter-spacing: 0.01em;
+				cursor: pointer;
+				backdrop-filter: blur(0.625rem);
+			}
+
+			.deck_button:hover {
+				background: rgba(0, 0, 0, 0.26);
+			}
+
+			.deck_button-help {
+				order: 2;
+				width: 2.5rem;
+				height: 2.5rem;
+				padding: 0;
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				font-size: 1rem;
+				font-weight: 600;
+			}
+
+			.deck_button-mode {
+				order: 1;
+			}
+
+			.deck_help-overlay {
+				position: fixed;
+				inset: 0;
+				z-index: 30;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				padding: 1.5rem;
+				background: rgba(0, 0, 0, 0.4);
+				backdrop-filter: blur(0.75rem);
+				opacity: 0;
+				pointer-events: none;
+				transition: opacity 180ms ease;
+			}
+
+			.deck_help-overlay-open {
+				opacity: 1;
+				pointer-events: auto;
+			}
+
+			.deck_help-panel {
+				width: min(77.5rem, calc(100vw - 3rem));
+				max-height: calc(100vh - 3rem);
+				overflow: auto;
+				border-radius: 1.5rem;
+				padding: 1.5rem;
+				background: rgba(22, 24, 29, 0.72);
+				border: 0.0625rem solid rgba(255, 255, 255, 0.12);
+				box-shadow: 0 1.5rem 5rem rgba(0, 0, 0, 0.35);
+				color: #fff;
+				backdrop-filter: blur(1.375rem);
+			}
+
+			.deck_help-header {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: 1rem;
+				margin-bottom: 0.875rem;
+			}
+
+			.deck_help-intro-group {
+				display: grid;
+				gap: 0.5rem;
+			}
+
+			.deck_help-title {
+				margin: 0;
+				font-size: 1.75rem;
+				font-weight: 600;
+				line-height: 1.1;
+				letter-spacing: -0.02em;
+			}
+
+			.deck_help-eyebrow {
+				margin: 0;
+				color: rgba(255, 255, 255, 0.54);
+				font-size: 0.75rem;
+				font-weight: 600;
+				line-height: 1;
+				letter-spacing: 0.16em;
+				text-transform: uppercase;
+			}
+
+			.deck_help-intro {
+				margin: 0 0 1.25rem;
+				color: rgba(255, 255, 255, 0.72);
+				font-size: 0.9375rem;
+				line-height: 1.5;
+			}
+
+			.deck_help-layout {
+				display: grid;
+				grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+				gap: 1.75rem;
+				align-items: start;
+			}
+
+			.deck_help-column {
+				min-width: 0;
+			}
+
+			.deck_help-column-trackpad {
+				padding-left: 1.75rem;
+				border-left: 0.0625rem solid rgba(255, 255, 255, 0.1);
+			}
+
+			.deck_help-section-title {
+				margin: 0 0 0.75rem;
+				font-size: 0.9375rem;
+				font-weight: 600;
+				line-height: 1.2;
+				letter-spacing: 0.01em;
+				color: rgba(255, 255, 255, 0.88);
+			}
+
+			.deck_help-commands {
+				display: grid;
+				gap: 0.875rem;
+			}
+
+			.deck_help-command {
+				display: grid;
+				grid-template-columns: 7.5rem minmax(0, 1fr);
+				gap: 1rem;
+				align-items: center;
+				padding: 1rem;
+				border-radius: 1.125rem;
+				background: rgba(255, 255, 255, 0.07);
+				border: 0.0625rem solid rgba(255, 255, 255, 0.08);
+			}
+
+			.deck_help-command-icon {
+				width: 100%;
+				max-width: 6rem;
+				height: auto;
+				display: block;
+				opacity: 0.9;
+				filter: brightness(0) invert(1);
+			}
+
+			.deck_help-icon-svg {
+				width: 100%;
+				height: auto;
+				display: block;
+			}
+
+			.deck_help-zoom-icon {
+				width: 100%;
+				height: auto;
+				display: none;
+			}
+
+			.deck_help-zoom-icon-visible {
+				display: block;
+			}
+
+			.deck_help-command-title {
+				margin: 0 0 0.375rem;
+				font-size: 1rem;
+				font-weight: 600;
+				line-height: 1.2;
+				color: #fff;
+			}
+
+			.deck_help-copy {
+				margin: 0;
+				color: rgba(255, 255, 255, 0.72);
+				font-size: 0.875rem;
+				line-height: 1.45;
+			}
+
+			.deck_help-preview {
+				aspect-ratio: 16 / 10;
+				border-radius: 1.125rem;
+				background: rgba(255, 255, 255, 0.07);
+				border: 0.0625rem solid rgba(255, 255, 255, 0.08);
+				overflow: hidden;
+				margin-bottom: 1.125rem;
+			}
+
+			.deck_help-preview-frame {
+				display: block;
+				width: 100%;
+				height: 100%;
+				border: 0;
+				pointer-events: none;
+			}
+
+			.deck_help-tab-list {
+				display: grid;
+				grid-template-columns: repeat(4, minmax(0, 1fr));
+				gap: 0.625rem;
+			}
+
+			.deck_help-tab {
+				position: relative;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				min-height: 3.25rem;
+				padding: 0.75rem 0.5rem 0.9375rem;
+				border-radius: 0.875rem;
+				background: rgba(255, 255, 255, 0.05);
+				border: 0.0625rem solid rgba(255, 255, 255, 0.08);
+				color: rgba(255, 255, 255, 0.86);
+				font-size: 0.8125rem;
+				font-weight: 600;
+				line-height: 1.35;
+				text-align: center;
+				cursor: pointer;
+				overflow: hidden;
+				transition:
+					background 180ms ease,
+					border-color 180ms ease,
+					color 180ms ease;
+			}
+
+			.deck_help-tab-active {
+				background: rgba(255, 255, 255, 0.1);
+				border-color: rgba(255, 255, 255, 0.18);
+				color: #fff;
+			}
+
+			.deck_help-tab-label {
+				display: block;
+			}
+
+			.deck_help-tab-progress {
+				position: absolute;
+				left: 0.125rem;
+				right: 0.125rem;
+				bottom: 0;
+				height: 0.1875rem;
+				border-radius: 0 0 0.75rem 0.75rem;
+				background: rgba(255, 255, 255, 0.1);
+				overflow: hidden;
+				pointer-events: none;
+			}
+
+			.deck_help-tab-progress-fill {
+				display: block;
+				height: 100%;
+				width: 0%;
+				border-radius: 0 0 0.75rem 0.75rem;
+				background: rgba(255, 255, 255, 0.9);
+			}
+
+			.deck_help-close {
+				border: 0;
+				border-radius: 999rem;
+				padding: 0.625rem 0.875rem;
+				min-height: 2.5rem;
+				background: rgba(0, 0, 0, 0.18);
+				color: #fff;
+				font-size: 0.875rem;
+				line-height: 1;
+				letter-spacing: 0.01em;
+				cursor: pointer;
+				backdrop-filter: blur(0.625rem);
+			}
+
+			.deck_help-close:hover {
+				background: rgba(0, 0, 0, 0.26);
+			}
+
+			.deck_help-note {
+				margin-top: 1.125rem;
+				color: rgba(255, 255, 255, 0.58);
+				font-size: 0.8125rem;
+				line-height: 1.45;
+			}
+
+			@media (max-width: 47.5rem) {
+				.deck_help-layout {
+					grid-template-columns: 1fr;
+				}
+
+				.deck_help-panel {
+					padding: 1.25rem;
+				}
+
+				.deck_help-header {
+					align-items: flex-start;
+					flex-direction: column;
+				}
+
+				.deck_help-column-trackpad {
+					padding-left: 0;
+					padding-top: 1.25rem;
+					border-left: 0;
+					border-top: 0.0625rem solid rgba(255, 255, 255, 0.1);
+				}
+
+				.deck_help-command {
+					grid-template-columns: 5.5rem minmax(0, 1fr);
+				}
+
+				.deck_help-tab-list {
+					grid-template-columns: repeat(2, minmax(0, 1fr));
+				}
+			}
+			</style>
+				<style>
+			.wf-design-mode .deck_shell {
+				height: auto !important;
+				min-height: 0 !important;
+				overflow: visible !important;
+			}
+
+			.wf-design-mode .deck_stage {
+				position: static !important;
+				display: grid !important;
+				width: 100% !important;
+				height: auto !important;
+				min-height: 0 !important;
+				padding: 1rem !important;
+				gap: 1rem !important;
+				overflow: visible !important;
+			}
+
+			.wf-design-mode .deck_stage::before {
+				content: "Deck Frames" !important;
+				display: block !important;
+				color: rgba(255, 255, 255, 0.72) !important;
+				font-size: 0.875rem !important;
+				line-height: 1.2 !important;
+				letter-spacing: 0.04em !important;
+				text-transform: uppercase !important;
+			}
+
+			.wf-design-mode .deck_frame {
+				position: relative !important;
+				inset: auto !important;
+				display: block !important;
+				width: 100% !important;
+				height: auto !important;
+				min-height: 32rem !important;
+				aspect-ratio: 16 / 9 !important;
+				opacity: 1 !important;
+				transform: none !important;
+				overflow: hidden !important;
+				border-radius: 1rem !important;
+				outline: 0.0625rem solid rgba(255, 255, 255, 0.12) !important;
+				outline-offset: 0 !important;
+				background: rgba(255, 255, 255, 0.04) !important;
+			}
+
+			.wf-design-mode .deck_frame-normal::before {
+				content: "Normal Frame" !important;
+			}
+
+			.wf-design-mode .deck_frame-overview::before {
+				content: "Overview Frame" !important;
+			}
+
+			.wf-design-mode .deck_frame-normal::before,
+			.wf-design-mode .deck_frame-overview::before {
+				position: absolute !important;
+				top: 0.75rem !important;
+				left: 0.75rem !important;
+				z-index: 2 !important;
+				padding: 0.35rem 0.5rem !important;
+				background: rgba(0, 0, 0, 0.7) !important;
+				color: rgba(255, 255, 255, 0.78) !important;
+				font-size: 0.75rem !important;
+				line-height: 1 !important;
+				border-radius: 999rem !important;
+				pointer-events: none !important;
+			}
+
+			.wf-design-mode .deck_toolbar {
+				position: static !important;
+				display: flex !important;
+				flex-wrap: wrap !important;
+				margin: 1rem !important;
+			}
+
+			.wf-design-mode .deck_help-overlay {
+				display: none !important;
+			}
+			</style>
+			</div>
+		<div class="deck_stage">
+			<iframe
+				class="deck_frame deck_frame-normal deck_frame-pending"
+				id="normal-frame"
+				src="./directional-self-contained.html?mode=normal"
+				title="Normal deck"
+			></iframe>
+			<iframe
+				class="deck_frame deck_frame-overview deck_frame-pending"
+				id="overview-frame"
+				src="./directional-self-contained.html?mode=overview"
+				title="Overview deck"
+			></iframe>
+		</div>
+
+		<div class="deck_toolbar">
+			<button
+				class="deck_button deck_button-help"
+				id="help-toggle"
+				type="button"
+				aria-label="Open navigation help"
+				aria-controls="help-overlay"
+				aria-expanded="false"
+			>?</button>
+			<button class="deck_button deck_button-mode" id="mode-toggle" type="button">Switch to overview</button>
+		</div>
+
+		<div class="deck_help-overlay" id="help-overlay" aria-hidden="true">
+			<section class="deck_help-panel" role="dialog" aria-modal="true" aria-labelledby="help-title">
+				<div class="deck_help-header">
+					<div class="deck_help-intro-group">
+						<p class="deck_help-eyebrow">Navigation</p>
+						<h1 class="deck_help-title" id="help-title">Keyboard and trackpad</h1>
+					</div>
+					<button class="deck_help-close" id="help-close" type="button">Close</button>
+				</div>
+				<p class="deck_help-intro">
+					Use the keyboard or trackpad to move through the deck and toggle overview mode.
+				</p>
+				<div class="deck_help-layout">
+					<section class="deck_help-column deck_help-column-keyboard">
+						<h2 class="deck_help-section-title">Keyboard</h2>
+						<div class="deck_help-commands">
+							<article class="deck_help-command">
+								<span class="deck_help-command-icon" aria-hidden="true">
+									<img class="deck_help-icon-svg" src="https://cdn.prod.website-files.com/69c551e56bb97cdb759254e1/69c5618951b12ba1bc0e64ee_arrow-keys.svg" alt="" />
+								</span>
+								<div>
+									<h3 class="deck_help-command-title">Arrow keys</h3>
+									<p class="deck_help-copy">Navigate left, right, up, and down through the deck.</p>
+								</div>
+							</article>
+							<article class="deck_help-command">
+								<span class="deck_help-command-icon" aria-hidden="true">
+									<img class="deck_help-icon-svg" src="https://cdn.prod.website-files.com/69c551e56bb97cdb759254e1/69c561880fcadde96c3083f3_escape-key.svg" alt="" />
+								</span>
+								<div>
+									<h3 class="deck_help-command-title">Escape</h3>
+									<p class="deck_help-copy">Toggle between deck overview and slide focus modes.</p>
+								</div>
+							</article>
+							<article class="deck_help-command">
+								<span class="deck_help-command-icon deck_help-command-icon-zoom" id="help-zoom-icon" aria-hidden="true">
+									<img class="deck_help-zoom-icon deck_help-zoom-icon-option deck_help-zoom-icon-visible" src="https://cdn.prod.website-files.com/69c551e56bb97cdb759254e1/69c56188c03059a9e22f5a33_option-zoom.svg" alt="" />
+									<img class="deck_help-zoom-icon deck_help-zoom-icon-ctrl" src="https://cdn.prod.website-files.com/69c551e56bb97cdb759254e1/69c561880e1e15aea83023e9_ctrl-zoom.svg" alt="" />
+									<img class="deck_help-zoom-icon deck_help-zoom-icon-alt" src="https://cdn.prod.website-files.com/69c551e56bb97cdb759254e1/69c56188e30803a99f3b2813_alt-zoom.svg" alt="" />
+								</span>
+								<div>
+									<h3 class="deck_help-command-title deck_help-command-title-zoom" id="help-zoom-title">Option + click</h3>
+									<p class="deck_help-copy deck_help-copy-zoom" id="help-zoom-copy">Zoom in to see finer detail.</p>
+								</div>
+							</article>
+						</div>
+					</section>
+					<section class="deck_help-column deck_help-column-trackpad">
+						<h2 class="deck_help-section-title">Trackpad</h2>
+						<div class="deck_help-preview">
+							<iframe class="deck_help-preview-frame" id="help-gesture-frame" src="../examples/trackpad-gesture.html?v=2026-03-25-6" title="Trackpad gesture preview" tabindex="-1"></iframe>
+						</div>
+						<div class="deck_help-tab-list" id="help-gesture-list">
+							<button class="deck_help-tab deck_help-tab-active" type="button" data-gesture-src="../examples/trackpad-gesture.html?v=2026-03-25-6">
+								<span class="deck_help-tab-label">Next project</span>
+								<span class="deck_help-tab-progress"><span class="deck_help-tab-progress-fill"></span></span>
+							</button>
+							<button class="deck_help-tab" type="button" data-gesture-src="../examples/trackpad-swipe-left.html?v=2026-03-25-6">
+								<span class="deck_help-tab-label">More project work</span>
+								<span class="deck_help-tab-progress"><span class="deck_help-tab-progress-fill"></span></span>
+							</button>
+							<button class="deck_help-tab" type="button" data-gesture-src="../examples/trackpad-pinch-in.html?v=2026-03-25-6">
+								<span class="deck_help-tab-label">Deck overview</span>
+								<span class="deck_help-tab-progress"><span class="deck_help-tab-progress-fill"></span></span>
+							</button>
+							<button class="deck_help-tab" type="button" data-gesture-src="../examples/trackpad-pinch-out.html?v=2026-03-25-6">
+								<span class="deck_help-tab-label">Slide focus</span>
+								<span class="deck_help-tab-progress"><span class="deck_help-tab-progress-fill"></span></span>
+							</button>
+						</div>
+					</section>
+				</div>
+			</section>
+		</div>
+
+		
+			<div id="dual-self-contained-javascript" class="hide">
+				<script type="text/javascript" src="./dual-self-contained.js"></script>
+			</div>
+		</div>
+	</body>
+</html>

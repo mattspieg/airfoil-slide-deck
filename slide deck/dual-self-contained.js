@@ -1,509 +1,20 @@
-<!DOCTYPE html>
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<meta
-			name="viewport"
-			content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-		/>
-
-		<title>Slide Deck Dual</title>
-
-		<link
-			href="https://cdn.prod.website-files.com/61bacad64fa3d3896a3d7a01/63184291d8d8886792d26613_Airfoil%20Favicon.png"
-			rel="apple-touch-icon"
-		/>
-		<link
-			href="https://cdn.prod.website-files.com/61bacad64fa3d3896a3d7a01/6318426d8e85c83957122077_Airfoil%20Favicon%20(1)-5%20(dragged).png"
-			rel="shortcut icon"
-			type="image/x-icon"
-		/>
-
-		<style>
-			:root {
-				--frame-scale-normal-active: 1;
-				--frame-scale-normal-inactive: 0.2;
-				--frame-scale-overview-active: 1;
-				--frame-scale-overview-inactive: 5;
-			}
-
-			html,
-			body {
-				width: 100%;
-				height: 100%;
-				margin: 0;
-				overflow: hidden;
-				background: #191919;
-			}
-
-			body {
-				font-family: Arial, Helvetica, sans-serif;
-			}
-
-			body.is-mobile-deck .toolbar,
-			body.is-mobile-deck .help-overlay,
-			body.is-mobile-deck .deck-frame--overview {
-				display: none !important;
-			}
-
-			.stage {
-				position: relative;
-				width: 100%;
-				height: 100%;
-				overflow: hidden;
-				background: #191919;
-			}
-
-			.deck-frame {
-				position: absolute;
-				inset: 0;
-				width: 100%;
-				height: 100%;
-				border: 0;
-				background: #191919;
-				transform-origin: 50% 50%;
-				transition:
-					opacity 560ms cubic-bezier(0.22, 0.61, 0.36, 1),
-					transform 560ms cubic-bezier(0.22, 0.61, 0.36, 1);
-			}
-
-			body.is-pinching .deck-frame {
-				transition: none;
-			}
-
-			body.is-click-zoom .deck-frame {
-				transition:
-					opacity 1120ms cubic-bezier(0.22, 0.61, 0.36, 1),
-					transform 1120ms cubic-bezier(0, .325, .288, 1.017);
-			}
-
-			body:not(.ready) .deck-frame {
-				opacity: 0;
-			}
-
-			.deck-frame--normal {
-				z-index: 2;
-			}
-
-			.deck-frame--overview {
-				z-index: 1;
-			}
-
-			body.mode-normal .deck-frame--normal {
-				opacity: 1;
-				transform: scale(var(--frame-scale-normal-active));
-				pointer-events: auto;
-			}
-
-			body.mode-normal .deck-frame--overview {
-				opacity: 0;
-				transform: scale(var(--frame-scale-overview-inactive));
-				pointer-events: none;
-			}
-
-			body.mode-overview .deck-frame--normal {
-				opacity: 0;
-				transform: scale(var(--frame-scale-normal-inactive));
-				pointer-events: none;
-			}
-
-			body.mode-overview .deck-frame--overview {
-				opacity: 1;
-				transform: scale(var(--frame-scale-overview-active));
-				pointer-events: auto;
-			}
-
-			.toolbar {
-				position: fixed;
-				top: 16px;
-				right: 16px;
-				z-index: 20;
-				display: flex;
-				align-items: center;
-				gap: 10px;
-			}
-
-			.toolbar-button,
-			.help-close {
-				border: 0;
-				border-radius: 999px;
-				padding: 10px 14px;
-				min-height: 40px;
-				background: rgba(0, 0, 0, 0.18);
-				color: #fff;
-				font: 14px/1 Arial, Helvetica, sans-serif;
-				letter-spacing: 0.01em;
-				cursor: pointer;
-				backdrop-filter: blur(10px);
-			}
-
-			.toolbar-button:hover,
-			.help-close:hover {
-				background: rgba(0, 0, 0, 0.26);
-			}
-
-			.help-toggle {
-				order: 2;
-				width: 40px;
-				height: 40px;
-				padding: 0;
-				display: inline-flex;
-				align-items: center;
-				justify-content: center;
-				font-size: 16px;
-				font-weight: 600;
-			}
-
-			.mode-toggle {
-				order: 1;
-			}
-
-			.help-overlay {
-				position: fixed;
-				inset: 0;
-				z-index: 30;
-				display: flex;
-				align-items: center;
-				justify-content: center;
-				padding: 24px;
-				background: rgba(0, 0, 0, 0.4);
-				backdrop-filter: blur(12px);
-				opacity: 0;
-				pointer-events: none;
-				transition: opacity 180ms ease;
-			}
-
-			.help-overlay.is-open {
-				opacity: 1;
-				pointer-events: auto;
-			}
-
-			.help-panel {
-				width: min(1240px, calc(100vw - 48px));
-				max-height: calc(100vh - 48px);
-				overflow: auto;
-				border-radius: 24px;
-				padding: 24px;
-				background: rgba(22, 24, 29, 0.72);
-				border: 1px solid rgba(255, 255, 255, 0.12);
-				box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
-				color: #fff;
-				backdrop-filter: blur(22px);
-			}
-
-			.help-header {
-				display: flex;
-				align-items: center;
-				justify-content: space-between;
-				gap: 16px;
-				margin-bottom: 14px;
-			}
-
-			.help-header h1 {
-				margin: 0;
-				font: 600 28px/1.1 Arial, Helvetica, sans-serif;
-				letter-spacing: -0.02em;
-			}
-
-			.help-eyebrow {
-				margin: 0 0 8px;
-				color: rgba(255, 255, 255, 0.54);
-				font: 600 12px/1 Arial, Helvetica, sans-serif;
-				letter-spacing: 0.16em;
-				text-transform: uppercase;
-			}
-
-			.help-intro {
-				margin: 0 0 20px;
-				color: rgba(255, 255, 255, 0.72);
-				font: 15px/1.5 Arial, Helvetica, sans-serif;
-			}
-
-			.help-layout {
-				display: grid;
-				grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-				gap: 28px;
-				align-items: start;
-			}
-
-			.help-column {
-				min-width: 0;
-			}
-
-			.help-column--trackpad {
-				padding-left: 28px;
-				border-left: 1px solid rgba(255, 255, 255, 0.1);
-			}
-
-			.help-column h2 {
-				margin: 0 0 12px;
-				font: 600 15px/1.2 Arial, Helvetica, sans-serif;
-				letter-spacing: 0.01em;
-				color: rgba(255, 255, 255, 0.88);
-			}
-
-			.help-commands {
-				display: grid;
-				gap: 14px;
-			}
-
-			.help-command {
-				display: grid;
-				grid-template-columns: 120px minmax(0, 1fr);
-				gap: 16px;
-				align-items: center;
-				padding: 16px;
-				border-radius: 18px;
-				background: rgba(255, 255, 255, 0.07);
-				border: 1px solid rgba(255, 255, 255, 0.08);
-			}
-
-			.help-command-icon {
-				width: 100%;
-				max-width: 96px;
-				height: auto;
-				display: block;
-				opacity: 0.9;
-				filter: brightness(0) invert(1);
-			}
-
-			.help-command-title {
-				margin: 0 0 6px;
-				font: 600 16px/1.2 Arial, Helvetica, sans-serif;
-				color: #fff;
-			}
-
-			.help-copy {
-				margin: 0;
-				color: rgba(255, 255, 255, 0.72);
-				font: 14px/1.45 Arial, Helvetica, sans-serif;
-			}
-
-			.help-gesture-preview {
-				aspect-ratio: 16 / 10;
-				border-radius: 18px;
-				background: rgba(255, 255, 255, 0.07);
-				border: 1px solid rgba(255, 255, 255, 0.08);
-				overflow: hidden;
-				margin-bottom: 18px;
-			}
-
-			.help-gesture-preview iframe {
-				display: block;
-				width: 100%;
-				height: 100%;
-				border: 0;
-				pointer-events: none;
-			}
-
-			.help-gesture-list {
-				display: grid;
-				grid-template-columns: repeat(4, minmax(0, 1fr));
-				gap: 10px;
-			}
-
-			.help-gesture-tab {
-				position: relative;
-				display: flex;
-				align-items: center;
-				justify-content: center;
-				min-height: 52px;
-				padding: 12px 8px 15px;
-				border-radius: 14px;
-				background: rgba(255, 255, 255, 0.05);
-				border: 1px solid rgba(255, 255, 255, 0.08);
-				color: rgba(255, 255, 255, 0.86);
-				font: 600 13px/1.35 Arial, Helvetica, sans-serif;
-				text-align: center;
-				cursor: pointer;
-				overflow: hidden;
-				transition:
-					background 180ms ease,
-					border-color 180ms ease,
-					color 180ms ease;
-			}
-
-			.help-gesture-tab.is-active {
-				background: rgba(255, 255, 255, 0.1);
-				border-color: rgba(255, 255, 255, 0.18);
-				color: #fff;
-			}
-
-			.help-gesture-tab-progress {
-				position: absolute;
-				left: 2px;
-				right: 2px;
-				bottom: 0;
-				height: 3px;
-				border-radius: 0 0 12px 12px;
-				background: rgba(255, 255, 255, 0.1);
-				overflow: hidden;
-				pointer-events: none;
-			}
-
-			.help-gesture-tab-progress > span {
-				display: block;
-				height: 100%;
-				width: 0%;
-				border-radius: inherit;
-				background: rgba(255, 255, 255, 0.9);
-			}
-
-			.help-gesture-title {
-				margin: 0;
-				font: 600 13px/1.35 Arial, Helvetica, sans-serif;
-				color: rgba(255, 255, 255, 0.86);
-				text-align: center;
-				padding: 10px 8px;
-				border-radius: 14px;
-				background: rgba(255, 255, 255, 0.05);
-				border: 1px solid rgba(255, 255, 255, 0.08);
-			}
-
-			.help-note {
-				margin-top: 18px;
-				color: rgba(255, 255, 255, 0.58);
-				font: 13px/1.45 Arial, Helvetica, sans-serif;
-			}
-
-			@media (max-width: 760px) {
-				.help-layout {
-					grid-template-columns: 1fr;
-				}
-
-				.help-panel {
-					padding: 20px;
-				}
-
-				.help-header {
-					align-items: flex-start;
-					flex-direction: column;
-				}
-
-				.help-column--trackpad {
-					padding-left: 0;
-					padding-top: 20px;
-					border-left: 0;
-					border-top: 1px solid rgba(255, 255, 255, 0.1);
-				}
-
-				.help-command {
-					grid-template-columns: 88px minmax(0, 1fr);
-				}
-
-				.help-gesture-list {
-					grid-template-columns: repeat(2, minmax(0, 1fr));
-				}
-			}
-		</style>
-	</head>
-		<body class="mode-normal">
-		<div class="stage">
-			<iframe
-				class="deck-frame deck-frame--normal"
-				id="normal-frame"
-				title="Normal deck"
-			></iframe>
-			<iframe
-				class="deck-frame deck-frame--overview"
-				id="overview-frame"
-				title="Overview deck"
-			></iframe>
-		</div>
-
-		<div class="toolbar">
-			<button
-				class="toolbar-button help-toggle"
-				id="help-toggle"
-				type="button"
-				aria-label="Open navigation help"
-				aria-controls="help-overlay"
-				aria-expanded="false"
-			>?</button>
-			<button class="toolbar-button mode-toggle" id="mode-toggle" type="button">Switch to overview</button>
-		</div>
-
-		<div class="help-overlay" id="help-overlay" aria-hidden="true">
-			<section class="help-panel" role="dialog" aria-modal="true" aria-labelledby="help-title">
-				<div class="help-header">
-					<div>
-						<p class="help-eyebrow">Navigation</p>
-						<h1 id="help-title">Keyboard and trackpad</h1>
-					</div>
-					<button class="help-close" id="help-close" type="button">Close</button>
-				</div>
-				<p class="help-intro">
-					Use the keyboard or trackpad to move through the deck and toggle overview mode.
-				</p>
-				<div class="help-layout">
-					<section class="help-column help-column--keyboard">
-						<h2>Keyboard</h2>
-						<div class="help-commands">
-							<article class="help-command">
-								<img class="help-command-icon" src="../examples/assets/arrow-keys.svg?v=2026-03-25-3" alt="" />
-								<div>
-									<h3 class="help-command-title">Arrow keys</h3>
-									<p class="help-copy">Navigate left, right, up, and down through the deck.</p>
-								</div>
-							</article>
-							<article class="help-command">
-								<img class="help-command-icon" src="../examples/assets/escape-key.svg?v=2026-03-25-3" alt="" />
-								<div>
-									<h3 class="help-command-title">Escape</h3>
-									<p class="help-copy">Toggle between deck overview and slide focus modes.</p>
-								</div>
-							</article>
-							<article class="help-command">
-								<img class="help-command-icon" id="help-zoom-icon" src="../examples/assets/option-zoom.svg?v=2026-03-25-3" alt="" />
-								<div>
-									<h3 class="help-command-title" id="help-zoom-title">Option + click</h3>
-									<p class="help-copy" id="help-zoom-copy">Zoom in to see finer detail.</p>
-								</div>
-							</article>
-						</div>
-					</section>
-					<section class="help-column help-column--trackpad">
-						<h2>Trackpad</h2>
-						<div class="help-gesture-preview">
-							<iframe id="help-gesture-frame" src="../examples/trackpad-gesture.html?v=2026-03-25-6" title="Trackpad gesture preview" tabindex="-1"></iframe>
-						</div>
-						<div class="help-gesture-list" id="help-gesture-list">
-							<button class="help-gesture-tab is-active" type="button" data-gesture-src="../examples/trackpad-gesture.html?v=2026-03-25-6">
-								<span>Next project</span>
-								<span class="help-gesture-tab-progress"><span></span></span>
-							</button>
-							<button class="help-gesture-tab" type="button" data-gesture-src="../examples/trackpad-swipe-left.html?v=2026-03-25-6">
-								<span>More project work</span>
-								<span class="help-gesture-tab-progress"><span></span></span>
-							</button>
-							<button class="help-gesture-tab" type="button" data-gesture-src="../examples/trackpad-pinch-in.html?v=2026-03-25-6">
-								<span>Deck overview</span>
-								<span class="help-gesture-tab-progress"><span></span></span>
-							</button>
-							<button class="help-gesture-tab" type="button" data-gesture-src="../examples/trackpad-pinch-out.html?v=2026-03-25-6">
-								<span>Slide focus</span>
-								<span class="help-gesture-tab-progress"><span></span></span>
-							</button>
-						</div>
-					</section>
-				</div>
-			</section>
-		</div>
-
-		<script type="module">
-			const normalFrame = document.getElementById('normal-frame');
-			const overviewFrame = document.getElementById('overview-frame');
-			const stage = document.querySelector('.stage');
-			const modeToggle = document.getElementById('mode-toggle');
-			const helpToggle = document.getElementById('help-toggle');
-			const helpOverlay = document.getElementById('help-overlay');
-			const helpClose = document.getElementById('help-close');
-			const helpZoomTitle = document.getElementById('help-zoom-title');
-			const helpZoomCopy = document.getElementById('help-zoom-copy');
-			const helpZoomIcon = document.getElementById('help-zoom-icon');
-			const helpGestureFrame = document.getElementById('help-gesture-frame');
-			const helpGestureList = document.getElementById('help-gesture-list');
-			const toolbar = document.querySelector('.toolbar');
+			const normalFrame = document.querySelector('.deck_frame-normal');
+			const overviewFrame = document.querySelector('.deck_frame-overview');
+			const stage = document.querySelector('.deck_stage');
+			const modeToggle = document.querySelector('.deck_button-mode');
+			const helpToggle = document.querySelector('.deck_button-help');
+			const helpOverlay = document.querySelector('.deck_help-overlay');
+			const helpClose = document.querySelector('.deck_help-close');
+			const helpZoomTitle = document.querySelector('.deck_help-command-title-zoom');
+			const helpZoomCopy = document.querySelector('.deck_help-copy-zoom');
+			const helpZoomIcons = {
+				option: document.querySelector('.deck_help-zoom-icon-option'),
+				ctrl: document.querySelector('.deck_help-zoom-icon-ctrl'),
+				alt: document.querySelector('.deck_help-zoom-icon-alt'),
+			};
+			const helpGestureFrame = document.querySelector('.deck_help-preview-frame');
+			const helpGestureList = document.querySelector('.deck_help-tab-list');
+			const toolbar = document.querySelector('.deck_toolbar');
 			const isMobileDeck =
 				/(iphone|ipod|ipad|android)/gi.test(navigator.userAgent) ||
 				(navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -512,12 +23,252 @@
 				lastSerialized: null,
 				mobileBound: false,
 			};
-			const slideCount = 62;
-			const groupStarts = [1, 2, 8, 14, 19, 24, 29, 34, 39, 44, 49, 54, 58];
-			const groupSizes = groupStarts.map((start, index) => {
-				const end = index + 1 < groupStarts.length ? groupStarts[index + 1] - 1 : slideCount;
-				return end - start + 1;
-			});
+				const slideCount = 62;
+				const groupStarts = [1, 2, 8, 14, 19, 24, 29, 34, 39, 44, 49, 54, 58];
+				const groupSizes = groupStarts.map((start, index) => {
+					const end = index + 1 < groupStarts.length ? groupStarts[index + 1] - 1 : slideCount;
+					return end - start + 1;
+				});
+				const dualDebugPrefix = '[dual-self-contained]';
+				function formatDualDebugDetail(detail) {
+					const dualDebugSeenObjects = new WeakSet();
+
+					try {
+						return JSON.stringify(detail, (key, value) => {
+							if (value === Infinity) {
+								return 'Infinity';
+							}
+
+							if (value === -Infinity) {
+								return '-Infinity';
+							}
+
+							if (typeof value === 'number' && Number.isNaN(value)) {
+								return 'NaN';
+							}
+
+							if (value instanceof Error) {
+								return {
+									name: value.name,
+									message: value.message,
+									stack: value.stack,
+								};
+							}
+
+							if (value && typeof value === 'object') {
+								if (dualDebugSeenObjects.has(value)) {
+									return '[Circular]';
+								}
+
+								dualDebugSeenObjects.add(value);
+							}
+
+							return value;
+						});
+					}
+					catch (error) {
+						return JSON.stringify({
+							stringifyError: String(error),
+						});
+					}
+				}
+
+				function dualDebug(message, detail) {
+					if (detail === undefined) {
+						console.log(dualDebugPrefix, message);
+						return;
+					}
+
+					console.log(`${dualDebugPrefix} ${message} ${formatDualDebugDetail(detail)}`);
+				}
+
+				dualDebug('bootstrap query state', {
+					readyState: document.readyState,
+					bodyPresent: !!document.body,
+					normalFrameFound: !!normalFrame,
+					overviewFrameFound: !!overviewFrame,
+					stageFound: !!stage,
+					normalFrameClassQueryCount: document.querySelectorAll('.deck_frame-normal').length,
+					overviewFrameClassQueryCount: document.querySelectorAll('.deck_frame-overview').length,
+					bodyHtmlPreview: document.body?.innerHTML?.slice(0, 300) || '',
+				});
+
+				document.addEventListener('DOMContentLoaded', () => {
+					dualDebug('DOMContentLoaded query state', {
+						readyState: document.readyState,
+						bodyPresent: !!document.body,
+						normalFrameFound: !!document.querySelector('.deck_frame-normal'),
+						overviewFrameFound: !!document.querySelector('.deck_frame-overview'),
+						stageFound: !!document.querySelector('.deck_stage'),
+					});
+				}, { once: true });
+
+				window.addEventListener('load', () => {
+					dualDebug('window load query state', {
+						readyState: document.readyState,
+						bodyPresent: !!document.body,
+						normalFrameFound: !!document.querySelector('.deck_frame-normal'),
+						overviewFrameFound: !!document.querySelector('.deck_frame-overview'),
+						stageFound: !!document.querySelector('.deck_stage'),
+					});
+				}, { once: true });
+
+				function getFrameDebugState(frame) {
+					if (!frame) {
+						return null;
+					}
+
+					try {
+						return {
+							id: frame.id,
+							assignedSrc: frame.getAttribute('src'),
+							resolvedSrc: frame.src,
+							contentHref: frame.contentWindow?.location?.href || null,
+							readyState: frame.contentDocument?.readyState || null,
+							title: frame.contentDocument?.title || null,
+							hasDeck: !!frame.contentWindow?.revealDeck,
+							bodyText: frame.contentDocument?.body?.innerText?.slice(0, 120) || '',
+						};
+					}
+					catch (error) {
+						return {
+							id: frame.id,
+							assignedSrc: frame.getAttribute('src'),
+							resolvedSrc: frame.src,
+							error: String(error),
+						};
+					}
+				}
+
+				function getParentDebugState() {
+					return {
+						location: window.location.href,
+						bodyClass: document.body.className,
+						hash: window.location.hash,
+						isMobileDeck,
+						normalFrame: getFrameDebugState(normalFrame),
+						overviewFrame: getFrameDebugState(overviewFrame),
+					};
+				}
+
+				function summarizeFrameState(frame) {
+					const state = getFrameDebugState(frame);
+					if (!state) {
+						return 'missing-frame';
+					}
+
+					return [
+						`id=${state.id}`,
+						`assigned=${state.assignedSrc || 'null'}`,
+						`resolved=${state.resolvedSrc || 'null'}`,
+						`content=${state.contentHref || 'null'}`,
+						`ready=${state.readyState || 'null'}`,
+						`title=${state.title || 'null'}`,
+						`hasDeck=${state.hasDeck}`,
+						`body=${JSON.stringify(state.bodyText || '')}`,
+					].join(' | ');
+				}
+
+				async function probeFrameSrc(frame, reason) {
+					if (!frame?.src) {
+						dualDebug(`probe skipped: ${frame?.id || 'unknown'} has no src`, { reason });
+						return;
+					}
+
+					try {
+						const response = await fetch(frame.src, {
+							method: 'HEAD',
+							cache: 'no-store',
+						});
+
+						dualDebug(`${frame.id} HEAD probe`, {
+							reason,
+							ok: response.ok,
+							status: response.status,
+							contentType: response.headers.get('content-type'),
+							contentLength: response.headers.get('content-length'),
+							url: frame.src,
+						});
+					}
+					catch (error) {
+						dualDebug(`${frame.id} HEAD probe failed`, {
+							reason,
+							url: frame.src,
+							error: String(error),
+						});
+					}
+				}
+
+				function startFrameLoadWatchdog(label) {
+					const startedAt = Date.now();
+					let tickCount = 0;
+					const maxTicks = 20;
+					const interval = window.setInterval(() => {
+						tickCount += 1;
+						const normalSummary = summarizeFrameState(normalFrame);
+						const overviewSummary = summarizeFrameState(overviewFrame);
+						const bothLoaded =
+							!!normalFrame?.contentWindow?.revealDeck &&
+							(!overviewFrame || !!overviewFrame?.contentWindow?.revealDeck);
+
+						dualDebug(`watchdog:${label}:tick-${tickCount}`, {
+							elapsedMs: Date.now() - startedAt,
+							bothLoaded,
+							normal: normalSummary,
+							overview: overviewSummary,
+						});
+
+						if (bothLoaded || tickCount >= maxTicks) {
+							window.clearInterval(interval);
+							dualDebug(`watchdog:${label}:stop`, {
+								elapsedMs: Date.now() - startedAt,
+								bothLoaded,
+							});
+						}
+					}, 1000);
+				}
+
+				window.addEventListener('error', (event) => {
+					dualDebug('window error', {
+						message: event.message,
+						filename: event.filename,
+						lineno: event.lineno,
+						colno: event.colno,
+					});
+				});
+
+				window.addEventListener('unhandledrejection', (event) => {
+					dualDebug('unhandled rejection', {
+						reason: String(event.reason),
+					});
+				});
+
+				[normalFrame, overviewFrame].forEach((frame) => {
+					if (!frame) {
+						return;
+					}
+
+					frame.addEventListener('load', () => {
+						dualDebug(`${frame.id} iframe load`, getFrameDebugState(frame));
+					});
+
+					frame.addEventListener('error', () => {
+						dualDebug(`${frame.id} iframe error`, getFrameDebugState(frame));
+					});
+				});
+
+				dualDebug('script start', getParentDebugState());
+
+				if (!normalFrame || !overviewFrame) {
+					dualDebug('frame lookup failed before init', {
+						readyState: document.readyState,
+						normalFrameFound: !!normalFrame,
+						overviewFrameFound: !!overviewFrame,
+						normalFrameClassQueryCount: document.querySelectorAll('.deck_frame-normal').length,
+						overviewFrameClassQueryCount: document.querySelectorAll('.deck_frame-overview').length,
+						bodyHtmlPreview: document.body?.innerHTML?.slice(0, 500) || '',
+					});
+				}
 
 			function parseDeckHash() {
 				const match = window.location.hash.match(/^#\/(\d+)$/);
@@ -588,23 +339,29 @@
 				});
 			}
 
-			function bindMobileHashSync() {
-				if (!isMobileDeck || hashState.mobileBound) {
-					return;
-				}
-
-				const deck = normalFrame.contentWindow?.revealDeck;
-				if (!deck || typeof deck.on !== 'function') {
-					return;
-				}
-
-				hashState.mobileBound = true;
-
-				deck.on('ready', () => {
-					const initialHash = parseDeckHash();
-					if (initialHash) {
-						applyHashToDeck(deck, initialHash);
+				function bindMobileHashSync() {
+					if (!isMobileDeck || hashState.mobileBound) {
+						return;
 					}
+
+					const deck = normalFrame.contentWindow?.revealDeck;
+					if (!deck || typeof deck.on !== 'function') {
+						dualDebug('bindMobileHashSync skipped: deck unavailable', getFrameDebugState(normalFrame));
+						return;
+					}
+
+					hashState.mobileBound = true;
+					dualDebug('bindMobileHashSync attached', getFrameDebugState(normalFrame));
+
+					deck.on('ready', () => {
+						const initialHash = parseDeckHash();
+						dualDebug('mobile deck ready', {
+							initialHash,
+							frame: getFrameDebugState(normalFrame),
+						});
+						if (initialHash) {
+							applyHashToDeck(deck, initialHash);
+						}
 					else if (typeof deck.getIndices === 'function') {
 						replaceDeckHash(deck.getIndices());
 					}
@@ -617,14 +374,17 @@
 				});
 			}
 
-			if (isMobileDeck) {
-				document.body.classList.add('is-mobile-deck', 'ready');
-				normalFrame.src = './directional.html?mode=mobile';
-				overviewFrame.remove();
-				toolbar?.remove();
-				helpOverlay.remove();
-				normalFrame.addEventListener('load', () => {
-					requestAnimationFrame(() => {
+				if (isMobileDeck) {
+					normalFrame.classList.remove('deck_frame-pending');
+					normalFrame.src = './directional-self-contained.html?mode=mobile';
+					dualDebug('assigned mobile iframe src', getParentDebugState());
+					void probeFrameSrc(normalFrame, 'mobile-assign');
+					startFrameLoadWatchdog('mobile');
+					overviewFrame.remove();
+					toolbar?.remove();
+					helpOverlay.remove();
+					normalFrame.addEventListener('load', () => {
+						requestAnimationFrame(() => {
 						bindMobileHashSync();
 					});
 				}, { once: true });
@@ -637,11 +397,13 @@
 					const deck = normalFrame.contentWindow?.revealDeck;
 					applyHashToDeck(deck, nextHash);
 				});
-			}
-			else {
-				normalFrame.src = './directional.html?mode=normal';
-				overviewFrame.src = './directional.html?mode=overview';
-			}
+					}
+					else {
+						dualDebug('using html iframe srcs', getParentDebugState());
+						void probeFrameSrc(normalFrame, 'html-src');
+						void probeFrameSrc(overviewFrame, 'html-src');
+						startFrameLoadWatchdog('dual');
+					}
 
 			if (!isMobileDeck) {
 				const state = {
@@ -672,6 +434,10 @@
 					resetTimer: null,
 				},
 				clickZoomTimer: null,
+				isClickZoom: false,
+				isPinching: false,
+				isReady: false,
+				isHelpOpen: false,
 				gestureTabs: {
 					index: 0,
 					timer: null,
@@ -689,12 +455,24 @@
 				};
 				const clickZoomDuration = 1120;
 
+				function toggleClass(element, className, enabled) {
+					element?.classList.toggle(className, enabled);
+				}
+
+				function syncFrameStateClasses() {
+					[normalFrame, overviewFrame].forEach((frame) => {
+						toggleClass(frame, 'deck_frame-pending', !state.isReady);
+						toggleClass(frame, 'deck_frame-click-zoom', state.isClickZoom);
+						toggleClass(frame, 'deck_frame-pinching', state.isPinching);
+					});
+				}
+
 				function measureViewportUnit(unit) {
 					const probe = document.createElement('div');
 					probe.style.position = 'fixed';
 					probe.style.left = '0';
 					probe.style.top = '0';
-					probe.style.width = '1px';
+					probe.style.width = '0.0625rem';
 					probe.style.height = `100${unit}`;
 					probe.style.pointerEvents = 'none';
 					probe.style.opacity = '0';
@@ -739,7 +517,7 @@
 					const childPresentRect = childPresentSlide?.getBoundingClientRect?.();
 					const childBodyRect = childBody?.getBoundingClientRect?.();
 
-					console.log('[dual layout]', reason, {
+					console.log(`[dual layout] ${reason} ${formatDualDebugDetail({
 						activeMode: state.activeMode,
 						isMobileDeck,
 						parentViewport: getViewportDebugMetrics(),
@@ -814,7 +592,7 @@
 							right: childPresentRect.right - childRevealRect.right,
 							bottom: childPresentRect.bottom - childRevealRect.bottom,
 						} : null,
-					});
+					})}`);
 				}
 
 				function getPlatformZoomConfig() {
@@ -823,7 +601,7 @@
 				if (/Mac|iPhone|iPad|iPod/i.test(platform)) {
 					return {
 						label: 'Option + click',
-						icon: '../examples/assets/option-zoom.svg?v=2026-03-25-3',
+						iconKey: 'option',
 						copy: 'Zoom in to see finer detail.',
 					};
 				}
@@ -831,20 +609,21 @@
 				if (/Linux/i.test(platform)) {
 					return {
 						label: 'Ctrl + click',
-						icon: '../examples/assets/ctrl-zoom.svg?v=2026-03-25-3',
+						iconKey: 'ctrl',
 						copy: 'Zoom in to see finer detail.',
 					};
 				}
 
 				return {
 					label: 'Alt + click',
-					icon: '../examples/assets/alt-zoom.svg?v=2026-03-25-3',
+					iconKey: 'alt',
 					copy: 'Zoom in to see finer detail.',
 				};
 			}
 
 				function setHelpOpen(isOpen, { restoreFocus = true } = {}) {
-				helpOverlay.classList.toggle('is-open', isOpen);
+				state.isHelpOpen = isOpen;
+				helpOverlay.classList.toggle('deck_help-overlay-open', isOpen);
 				helpOverlay.setAttribute('aria-hidden', String(!isOpen));
 				helpToggle.setAttribute('aria-expanded', String(isOpen));
 				if (isOpen) {
@@ -873,19 +652,21 @@
 				const platformZoomConfig = getPlatformZoomConfig();
 				helpZoomTitle.textContent = platformZoomConfig.label;
 				helpZoomCopy.textContent = platformZoomConfig.copy;
-				helpZoomIcon.src = platformZoomConfig.icon;
+				Object.entries(helpZoomIcons).forEach(([iconKey, iconElement]) => {
+					iconElement?.classList.toggle('deck_help-zoom-icon-visible', iconKey === platformZoomConfig.iconKey);
+				});
 
-				const gestureTabs = Array.from(helpGestureList.querySelectorAll('.help-gesture-tab'));
+				const gestureTabs = Array.from(helpGestureList.querySelectorAll('.deck_help-tab'));
 
 				function renderGestureProgress() {
 				const now = performance.now();
 				const elapsed = now - state.gestureTabs.startAt;
 				const progress = Math.max(0, Math.min(1, elapsed / state.gestureTabs.duration));
 				gestureTabs.forEach((tab, index) => {
-					const bar = tab.querySelector('.help-gesture-tab-progress > span');
+					const bar = tab.querySelector('.deck_help-tab-progress-fill');
 					bar.style.width = index === state.gestureTabs.index ? `${progress * 100}%` : '0%';
 				});
-				if (helpOverlay.classList.contains('is-open')) {
+				if (state.isHelpOpen) {
 					state.gestureTabs.raf = requestAnimationFrame(renderGestureProgress);
 				}
 				}
@@ -894,8 +675,8 @@
 				state.gestureTabs.index = index;
 				state.gestureTabs.startAt = performance.now();
 				gestureTabs.forEach((tab, tabIndex) => {
-					tab.classList.toggle('is-active', tabIndex === index);
-					const bar = tab.querySelector('.help-gesture-tab-progress > span');
+					tab.classList.toggle('deck_help-tab-active', tabIndex === index);
+					const bar = tab.querySelector('.deck_help-tab-progress-fill');
 					bar.style.width = tabIndex === index ? '0%' : '0%';
 				});
 				helpGestureFrame.src = gestureTabs[index].dataset.gestureSrc;
@@ -924,7 +705,7 @@
 				gestureTabs.forEach((tab, index) => {
 				tab.addEventListener('click', () => {
 					setGestureTab(index);
-					if (helpOverlay.classList.contains('is-open')) {
+					if (state.isHelpOpen) {
 						startGestureTabs();
 					}
 				});
@@ -940,7 +721,7 @@
 
 			function applyTransitionProgress(progress) {
 				state.transitionProgress = clamp(progress, 0, 1);
-				const isClickZoomToNormal = document.body.classList.contains('is-click-zoom') && state.activeMode === 'normal';
+				const isClickZoomToNormal = state.isClickZoom && state.activeMode === 'normal';
 
 				const normalOpacity = 1 - state.transitionProgress;
 				const overviewOpacity = state.transitionProgress;
@@ -973,9 +754,11 @@
 			function startClickZoom() {
 				clearClickZoomTimer();
 				setFrameOrigins(null);
-				document.body.classList.add('is-click-zoom');
+				state.isClickZoom = true;
+				syncFrameStateClasses();
 				state.clickZoomTimer = setTimeout(() => {
-					document.body.classList.remove('is-click-zoom');
+					state.isClickZoom = false;
+					syncFrameStateClasses();
 					setFrameOrigins(null);
 					state.clickZoomTimer = null;
 				}, clickZoomDuration);
@@ -991,7 +774,8 @@
 			function schedulePinchSnap() {
 				clearPinchSnapTimer();
 				state.pinchSnapTimer = setTimeout(() => {
-					document.body.classList.remove('is-pinching');
+					state.isPinching = false;
+					syncFrameStateClasses();
 					setMode(state.transitionProgress >= 0.5 ? 'overview' : 'normal');
 				}, 120);
 			}
@@ -1001,7 +785,8 @@
 					delta *= 1.9;
 				}
 
-				document.body.classList.add('is-pinching');
+				state.isPinching = true;
+				syncFrameStateClasses();
 				applyTransitionProgress(state.transitionProgress + delta);
 				schedulePinchSnap();
 			}
@@ -1136,15 +921,18 @@
 				return frame.contentWindow && frame.contentWindow.revealDeck ? frame.contentWindow.revealDeck : null;
 			}
 
-			function setMode(mode, { syncInactive = true } = {}) {
-				state.activeMode = mode;
-				state.transitionProgress = mode === 'overview' ? 1 : 0;
-				document.body.classList.toggle('mode-normal', mode === 'normal');
-				document.body.classList.toggle('mode-overview', mode === 'overview');
-				modeToggle.textContent = mode === 'normal' ? 'Switch to overview' : 'Back to normal';
-				applyTransitionProgress(state.transitionProgress);
+				function setMode(mode, { syncInactive = true } = {}) {
+					state.activeMode = mode;
+					state.transitionProgress = mode === 'overview' ? 1 : 0;
+					modeToggle.textContent = mode === 'normal' ? 'Switch to overview' : 'Back to normal';
+					applyTransitionProgress(state.transitionProgress);
+					dualDebug('setMode', {
+						mode,
+						syncInactive,
+						parent: getParentDebugState(),
+					});
 
-				const activeFrame = getFrame(mode);
+					const activeFrame = getFrame(mode);
 				try {
 					activeFrame.contentWindow.focus();
 					activeFrame.contentWindow.document.body.focus();
@@ -1161,17 +949,27 @@
 				});
 			}
 
-			function syncDeck(mode, indices) {
-				const deck = getDeck(mode);
-				if (!deck || !state.ready[mode]) {
-					return;
-				}
+				function syncDeck(mode, indices) {
+					const deck = getDeck(mode);
+					if (!deck || !state.ready[mode]) {
+						dualDebug('syncDeck skipped', {
+							mode,
+							indices,
+							hasDeck: !!deck,
+							ready: state.ready[mode],
+						});
+						return;
+					}
 
-				state.syncing = true;
-				deck.slide(indices.h, indices.v, indices.f || 0);
-				requestAnimationFrame(() => {
-					state.syncing = false;
-				});
+					dualDebug('syncDeck', {
+						mode,
+						indices,
+					});
+					state.syncing = true;
+					deck.slide(indices.h, indices.v, indices.f || 0);
+					requestAnimationFrame(() => {
+						state.syncing = false;
+					});
 			}
 
 			function syncInactiveDeck() {
@@ -1180,13 +978,22 @@
 				syncDeck(inactiveMode, activeIndices);
 			}
 
-			function applyInitialHashIfNeeded() {
-				if (state.initialHashApplied || !state.ready.normal || !state.ready.overview) {
-					return;
-				}
+				function applyInitialHashIfNeeded() {
+					if (state.initialHashApplied || !state.ready.normal || !state.ready.overview) {
+						dualDebug('applyInitialHashIfNeeded skipped', {
+							initialHashApplied: state.initialHashApplied,
+							ready: state.ready,
+							hash: window.location.hash,
+						});
+						return;
+					}
 
-				state.initialHashApplied = true;
-				const initialHash = parseDeckHash();
+					state.initialHashApplied = true;
+					const initialHash = parseDeckHash();
+					dualDebug('applyInitialHashIfNeeded', {
+						initialHash,
+						hash: window.location.hash,
+					});
 
 				if (initialHash) {
 					state.lastIndices.normal = initialHash;
@@ -1201,7 +1008,7 @@
 			}
 
 				helpToggle.addEventListener('click', () => {
-				setHelpOpen(!helpOverlay.classList.contains('is-open'));
+				setHelpOpen(!state.isHelpOpen);
 				});
 
 				helpClose.addEventListener('click', () => {
@@ -1215,7 +1022,7 @@
 				});
 
 				document.addEventListener('keydown', (event) => {
-				if (event.key === 'Escape' && helpOverlay.classList.contains('is-open')) {
+				if (event.key === 'Escape' && state.isHelpOpen) {
 					event.preventDefault();
 					event.stopPropagation();
 					setHelpOpen(false);
@@ -1241,34 +1048,52 @@
 				}
 			}, { passive: false });
 
-			window.addEventListener('message', (event) => {
-				const data = event.data;
-				if (!data || data.source !== 'directional-deck') {
-					return;
-				}
+				window.addEventListener('message', (event) => {
+					const data = event.data;
+					if (!data || data.source !== 'directional-deck') {
+						return;
+					}
 
-				if (data.type === 'ready') {
-					state.ready[data.mode] = true;
-					state.lastIndices[data.mode] = data.indices || state.lastIndices[data.mode];
+					dualDebug('message received', {
+						type: data.type,
+						mode: data.mode,
+						data,
+					});
 
-					if (state.ready.normal && state.ready.overview) {
-						document.body.classList.add('ready');
-						syncInactiveDeck();
-						applyInitialHashIfNeeded();
-						requestAnimationFrame(() => {
-							logDualLayoutMetrics('both-ready');
+					if (data.type === 'ready') {
+						state.ready[data.mode] = true;
+						state.lastIndices[data.mode] = data.indices || state.lastIndices[data.mode];
+						dualDebug('child ready', {
+							ready: state.ready,
+							lastIndices: state.lastIndices,
+							parent: getParentDebugState(),
 						});
+
+						if (state.ready.normal && state.ready.overview) {
+							state.isReady = true;
+							syncFrameStateClasses();
+							syncInactiveDeck();
+							applyInitialHashIfNeeded();
+							dualDebug('both children ready', getParentDebugState());
+							requestAnimationFrame(() => {
+								logDualLayoutMetrics('both-ready');
+							});
 					}
 
 					return;
 				}
 
-				if (data.type === 'slidechanged') {
-					state.lastIndices[data.mode] = {
-						h: data.indexh,
-						v: data.indexv,
-						f: data.indexf || 0,
-					};
+					if (data.type === 'slidechanged') {
+						state.lastIndices[data.mode] = {
+							h: data.indexh,
+							v: data.indexv,
+							f: data.indexf || 0,
+						};
+						dualDebug('child slidechanged', {
+							mode: data.mode,
+							lastIndices: state.lastIndices,
+							syncing: state.syncing,
+						});
 
 					if (!state.syncing) {
 						const inactiveMode = data.mode === 'normal' ? 'overview' : 'normal';
@@ -1285,15 +1110,22 @@
 					return;
 				}
 
-				if (data.type === 'toggle-request') {
-					setMode(state.activeMode === 'normal' ? 'overview' : 'normal');
-					return;
-				}
+					if (data.type === 'toggle-request') {
+						dualDebug('toggle request', {
+							activeMode: state.activeMode,
+						});
+						setMode(state.activeMode === 'normal' ? 'overview' : 'normal');
+						return;
+					}
 
-				if (data.type === 'open-normal') {
-					if (data.indices) {
-						state.lastIndices.overview = data.indices;
-						state.lastIndices.normal = data.indices;
+					if (data.type === 'open-normal') {
+						dualDebug('open-normal request', {
+							indices: data.indices,
+							clickCenter: data.clickCenter,
+						});
+						if (data.indices) {
+							state.lastIndices.overview = data.indices;
+							state.lastIndices.normal = data.indices;
 					}
 
 					if (data.indices) {
@@ -1311,12 +1143,19 @@
 					return;
 				}
 
-				if (data.type === 'pinch') {
-					if (data.pinchType === 'wheel') {
-						updatePinchProgress(clamp((data.deltaY || 0) * 0.004, -0.24, 0.24));
-					}
+					if (data.type === 'pinch') {
+						dualDebug('pinch event', {
+							pinchType: data.pinchType,
+							deltaY: data.deltaY,
+							scale: data.scale,
+							transitionProgress: state.transitionProgress,
+						});
+						if (data.pinchType === 'wheel') {
+							updatePinchProgress(clamp((data.deltaY || 0) * 0.004, -0.24, 0.24));
+						}
 					else if (data.pinchType === 'gesturestart') {
-						document.body.classList.add('is-pinching');
+						state.isPinching = true;
+						syncFrameStateClasses();
 						state.pinchGestureScale = data.scale || 1;
 						clearPinchSnapTimer();
 					}
@@ -1333,11 +1172,16 @@
 					return;
 				}
 
-				if (data.type === 'wheel-nav') {
-					queueWheelNavigation(data.deltaX || 0, data.deltaY || 0);
-				}
-			});
+					if (data.type === 'wheel-nav') {
+						dualDebug('wheel-nav event', {
+							deltaX: data.deltaX || 0,
+							deltaY: data.deltaY || 0,
+						});
+						queueWheelNavigation(data.deltaX || 0, data.deltaY || 0);
+					}
+				});
 
+				syncFrameStateClasses();
 				applyTransitionProgress(0);
 				window.addEventListener('resize', () => {
 					requestAnimationFrame(() => {
@@ -1361,6 +1205,3 @@
 					syncDeck('overview', nextHash);
 				});
 			}
-		</script>
-	</body>
-</html>
