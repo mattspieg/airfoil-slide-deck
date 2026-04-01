@@ -74,12 +74,7 @@
 				}
 
 				function dualDebug(message, detail) {
-					if (detail === undefined) {
-						console.log(dualDebugPrefix, message);
-						return;
-					}
-
-					console.log(`${dualDebugPrefix} ${message} ${formatDualDebugDetail(detail)}`);
+					return;
 				}
 
 				dualDebug('bootstrap query state', {
@@ -149,6 +144,96 @@
 						normalFrame: getFrameDebugState(normalFrame),
 						overviewFrame: getFrameDebugState(overviewFrame),
 					};
+				}
+
+				function getElementDebugState(element) {
+					if (!element) {
+						return null;
+					}
+
+					const rect = element.getBoundingClientRect();
+					const style = window.getComputedStyle(element);
+					return {
+						tag: element.tagName,
+						id: element.id || null,
+						className: element.className || null,
+						display: style.display,
+						position: style.position,
+						visibility: style.visibility,
+						opacity: style.opacity,
+						pointerEvents: style.pointerEvents,
+						width: style.width,
+						height: style.height,
+						minHeight: style.minHeight,
+						maxHeight: style.maxHeight,
+						overflow: style.overflow,
+						overflowX: style.overflowX,
+						overflowY: style.overflowY,
+						transform: style.transform,
+						rect: {
+							top: rect.top,
+							left: rect.left,
+							width: rect.width,
+							height: rect.height,
+							bottom: rect.bottom,
+							right: rect.right,
+						},
+					};
+				}
+
+				function logMobileShellMetrics(reason) {
+					if (!isMobileDeck) {
+						return;
+					}
+
+					let childDocState = null;
+					try {
+						const childDoc = normalFrame?.contentDocument;
+						const childWindow = normalFrame?.contentWindow;
+						childDocState = childDoc ? {
+							readyState: childDoc.readyState,
+							title: childDoc.title || null,
+							location: childWindow?.location?.href || null,
+							html: getElementDebugState(childDoc.documentElement),
+							body: getElementDebugState(childDoc.body),
+							reveal: getElementDebugState(childDoc.querySelector('.reveal')),
+							slides: getElementDebugState(childDoc.querySelector('.slides')),
+							presentSlide: getElementDebugState(
+								childDoc.querySelector('.slides section.present:not(.stack), .slides > section.present')
+							),
+							bodyTextPreview: childDoc.body?.innerText?.slice(0, 200) || '',
+							hasDeck: !!childWindow?.revealDeck,
+						} : null;
+					}
+					catch (error) {
+						childDocState = {
+							error: String(error),
+						};
+					}
+
+					dualDebug(`mobile shell metrics:${reason}`, {
+						parentViewport: {
+							innerWidth: window.innerWidth,
+							innerHeight: window.innerHeight,
+							clientWidth: document.documentElement.clientWidth,
+							clientHeight: document.documentElement.clientHeight,
+							visualViewport: window.visualViewport ? {
+								width: window.visualViewport.width,
+								height: window.visualViewport.height,
+								offsetTop: window.visualViewport.offsetTop,
+								offsetLeft: window.visualViewport.offsetLeft,
+								scale: window.visualViewport.scale,
+							} : null,
+						},
+						html: getElementDebugState(document.documentElement),
+						body: getElementDebugState(document.body),
+						stage: getElementDebugState(stage),
+						normalFrame: getElementDebugState(normalFrame),
+						overviewFrame: getElementDebugState(overviewFrame),
+						toolbar: getElementDebugState(toolbar),
+						helpOverlay: getElementDebugState(helpOverlay),
+						child: childDocState,
+					});
 				}
 
 				function summarizeFrameState(frame) {
@@ -376,27 +461,56 @@
 
 				if (isMobileDeck) {
 					normalFrame.classList.remove('deck_frame-pending');
-					normalFrame.src = './directional-self-contained.html?mode=mobile';
+					normalFrame.src = '/directional?mode=mobile';
 					dualDebug('assigned mobile iframe src', getParentDebugState());
+					logMobileShellMetrics('after-mobile-src-assigned');
 					void probeFrameSrc(normalFrame, 'mobile-assign');
 					startFrameLoadWatchdog('mobile');
 					overviewFrame.remove();
 					toolbar?.remove();
 					helpOverlay.remove();
+					logMobileShellMetrics('after-mobile-dom-prune');
 					normalFrame.addEventListener('load', () => {
+						dualDebug('mobile iframe load pre-bind', {
+							frame: getFrameDebugState(normalFrame),
+						});
+						logMobileShellMetrics('mobile-iframe-load');
 						requestAnimationFrame(() => {
-						bindMobileHashSync();
-					});
-				}, { once: true });
-				window.addEventListener('hashchange', () => {
-					const nextHash = parseDeckHash();
-					if (!nextHash) {
-						return;
-					}
+							bindMobileHashSync();
+							logMobileShellMetrics('mobile-iframe-load-raf');
+						});
+					}, { once: true });
+					window.addEventListener('hashchange', () => {
+						const nextHash = parseDeckHash();
+						dualDebug('mobile hashchange', {
+							hash: window.location.hash,
+							parsed: nextHash,
+						});
+						if (!nextHash) {
+							return;
+						}
 
-					const deck = normalFrame.contentWindow?.revealDeck;
-					applyHashToDeck(deck, nextHash);
-				});
+						const deck = normalFrame.contentWindow?.revealDeck;
+						applyHashToDeck(deck, nextHash);
+					});
+					window.addEventListener('pageshow', () => {
+						logMobileShellMetrics('pageshow');
+					});
+					window.addEventListener('resize', () => {
+						logMobileShellMetrics('resize');
+					});
+					window.visualViewport?.addEventListener('resize', () => {
+						logMobileShellMetrics('visualViewport-resize');
+					});
+					window.setTimeout(() => {
+						logMobileShellMetrics('timeout-250ms');
+					}, 250);
+					window.setTimeout(() => {
+						logMobileShellMetrics('timeout-1000ms');
+					}, 1000);
+					window.setTimeout(() => {
+						logMobileShellMetrics('timeout-2500ms');
+					}, 2500);
 					}
 					else {
 						dualDebug('using html iframe srcs', getParentDebugState());
@@ -503,96 +617,7 @@
 				}
 
 				function logDualLayoutMetrics(reason) {
-					const stageRect = stage?.getBoundingClientRect();
-					const normalFrameRect = normalFrame?.getBoundingClientRect();
-					const overviewFrameRect = overviewFrame?.getBoundingClientRect();
-					const normalChildWindow = normalFrame?.contentWindow;
-					const normalChildDoc = normalChildWindow?.document;
-					const childReveal = normalChildDoc?.querySelector('.reveal');
-					const childSlides = normalChildDoc?.querySelector('.slides');
-					const childPresentSlide = normalChildDoc?.querySelector('.slides section.present:not(.stack), .slides > section.present');
-					const childBody = normalChildDoc?.body;
-					const childRevealRect = childReveal?.getBoundingClientRect?.();
-					const childSlidesRect = childSlides?.getBoundingClientRect?.();
-					const childPresentRect = childPresentSlide?.getBoundingClientRect?.();
-					const childBodyRect = childBody?.getBoundingClientRect?.();
-
-					console.log(`[dual layout] ${reason} ${formatDualDebugDetail({
-						activeMode: state.activeMode,
-						isMobileDeck,
-						parentViewport: getViewportDebugMetrics(),
-						stageRect: stageRect ? {
-							top: stageRect.top,
-							left: stageRect.left,
-							width: stageRect.width,
-							height: stageRect.height,
-							bottom: stageRect.bottom,
-							right: stageRect.right,
-						} : null,
-						normalFrameRect: normalFrameRect ? {
-							top: normalFrameRect.top,
-							left: normalFrameRect.left,
-							width: normalFrameRect.width,
-							height: normalFrameRect.height,
-							bottom: normalFrameRect.bottom,
-							right: normalFrameRect.right,
-						} : null,
-						overviewFrameRect: overviewFrameRect ? {
-							top: overviewFrameRect.top,
-							left: overviewFrameRect.left,
-							width: overviewFrameRect.width,
-							height: overviewFrameRect.height,
-							bottom: overviewFrameRect.bottom,
-							right: overviewFrameRect.right,
-						} : null,
-						childViewport: normalChildWindow ? {
-							innerWidth: normalChildWindow.innerWidth,
-							innerHeight: normalChildWindow.innerHeight,
-							clientWidth: normalChildDoc?.documentElement?.clientWidth,
-							clientHeight: normalChildDoc?.documentElement?.clientHeight,
-							htmlVhVar: normalChildDoc?.documentElement?.style?.getPropertyValue('--vh') || null,
-						} : null,
-						childBodyClass: childBody?.className || null,
-						childRevealClass: childReveal?.className || null,
-						childBodyRect: childBodyRect ? {
-							top: childBodyRect.top,
-							left: childBodyRect.left,
-							width: childBodyRect.width,
-							height: childBodyRect.height,
-							bottom: childBodyRect.bottom,
-							right: childBodyRect.right,
-						} : null,
-						childRevealRect: childRevealRect ? {
-							top: childRevealRect.top,
-							left: childRevealRect.left,
-							width: childRevealRect.width,
-							height: childRevealRect.height,
-							bottom: childRevealRect.bottom,
-							right: childRevealRect.right,
-						} : null,
-						childSlidesRect: childSlidesRect ? {
-							top: childSlidesRect.top,
-							left: childSlidesRect.left,
-							width: childSlidesRect.width,
-							height: childSlidesRect.height,
-							bottom: childSlidesRect.bottom,
-							right: childSlidesRect.right,
-						} : null,
-						childPresentRect: childPresentRect ? {
-							top: childPresentRect.top,
-							left: childPresentRect.left,
-							width: childPresentRect.width,
-							height: childPresentRect.height,
-							bottom: childPresentRect.bottom,
-							right: childPresentRect.right,
-						} : null,
-						overflow: childPresentRect && childRevealRect ? {
-							top: childPresentRect.top - childRevealRect.top,
-							left: childPresentRect.left - childRevealRect.left,
-							right: childPresentRect.right - childRevealRect.right,
-							bottom: childPresentRect.bottom - childRevealRect.bottom,
-						} : null,
-					})}`);
+					return;
 				}
 
 				function getPlatformZoomConfig() {

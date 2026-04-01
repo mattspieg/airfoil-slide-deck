@@ -1,0 +1,574 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Trackpad Gestures Webflow</title>
+		<style>
+			:root {
+				--color-trackpad-stroke: rgba(255, 255, 255, 0.34);
+				--color-finger-fill: #ffffff;
+				--color-finger-stroke: rgba(255, 255, 255, 0.72);
+				--color-trail-strong: rgba(255, 255, 255, 0.42);
+				--color-trail-soft: rgba(255, 255, 255, 0);
+				--color-card-stroke: rgba(255, 255, 255, 0.1);
+				--color-card-bg: rgba(255, 255, 255, 0.03);
+				--color-label: rgba(255, 255, 255, 0.92);
+				--color-label-muted: rgba(255, 255, 255, 0.6);
+				--gesture-duration: 3.8s;
+				--gesture-ease: cubic-bezier(0.4, 0, 0.2, 1);
+				--trackpad-radius: 1.75rem;
+				--trackpad-width: 15rem;
+				--finger-size: 2rem;
+				--finger-size-small: 1.375rem;
+			}
+
+			* {
+				box-sizing: border-box;
+			}
+
+			html,
+			body {
+				min-height: 100%;
+				margin: 0;
+				background: transparent;
+				color: var(--color-label);
+				font-family: inherit;
+			}
+
+			body {
+				padding: 0;
+			}
+
+			.page_wrap {
+				width: 100%;
+			}
+
+			.page_padding {
+				padding: 1rem;
+			}
+
+			.gesture-grid {
+				display: grid;
+				grid-template-columns: repeat(2, minmax(0, 1fr));
+				gap: 1rem;
+				align-items: stretch;
+			}
+
+			.gesture-card {
+				display: flex;
+				flex-direction: column;
+				gap: 0.875rem;
+				padding: 1rem;
+				border: 0.0625rem solid var(--color-card-stroke);
+				border-radius: 1.5rem;
+				background: var(--color-card-bg);
+			}
+
+			.gesture-card_label-wrap {
+				display: flex;
+				flex-direction: column;
+				gap: 0.25rem;
+			}
+
+			.gesture-card_title {
+				margin: 0;
+				font-size: 0.9375rem;
+				font-weight: 600;
+				line-height: 1.2;
+				letter-spacing: 0.01em;
+			}
+
+			.gesture-card_label {
+				margin: 0;
+				font-size: 0.75rem;
+				line-height: 1.4;
+				color: var(--color-label-muted);
+			}
+
+			.gesture-card_visual {
+				display: grid;
+				place-items: center;
+				min-height: 12rem;
+			}
+
+			.trackpad-demo {
+				position: relative;
+				width: min(100%, var(--trackpad-width));
+				aspect-ratio: 1.36;
+				border: 0.25rem solid var(--color-trackpad-stroke);
+				border-radius: var(--trackpad-radius);
+				background: rgba(255, 255, 255, 0.01);
+				box-shadow:
+					inset 0 0.0625rem 0 rgba(255, 255, 255, 0.08),
+					0 0.125rem 0.5rem rgba(0, 0, 0, 0.16);
+				overflow: hidden;
+			}
+
+			.trackpad-demo_gesture {
+				position: absolute;
+				inset: 0;
+			}
+
+			.trackpad-demo_finger {
+				position: absolute;
+				border: 0.125rem solid var(--color-finger-stroke);
+				border-radius: 999rem;
+				background: transparent;
+			}
+
+			.trackpad-demo_finger::before,
+			.trackpad-demo_finger::after {
+				content: "";
+				position: absolute;
+			}
+
+			.trackpad-demo_finger::after {
+				inset: 0;
+				border-radius: inherit;
+				background: var(--color-finger-fill);
+				opacity: 0;
+				animation: finger-fill var(--gesture-duration) linear infinite;
+			}
+
+			.trackpad-demo.is-swipe-up .trackpad-demo_gesture {
+				left: 50%;
+				bottom: 1.5rem;
+				width: 7rem;
+				height: calc(100% - 3rem);
+				transform: translateX(-50%);
+			}
+
+			.trackpad-demo.is-swipe-up .trackpad-demo_finger {
+				width: 2.5rem;
+				height: 2.5rem;
+				animation: swipe-up-finger var(--gesture-duration) var(--gesture-ease) infinite;
+			}
+
+			.trackpad-demo.is-swipe-up .trackpad-demo_finger::before {
+				left: 50%;
+				top: 50%;
+				width: 2.5rem;
+				height: 4.625rem;
+				transform: translate(-50%, 0);
+				border-radius: 0 0 999rem 999rem;
+				background: linear-gradient(
+					180deg,
+					var(--color-trail-strong) 0%,
+					var(--color-trail-soft) 100%
+				);
+				filter: blur(0.125rem);
+				clip-path: inset(-0.5rem 0 -0.5rem 0 round 0 0 999rem 999rem);
+				opacity: 0;
+				animation: swipe-up-trail var(--gesture-duration) ease-in-out infinite;
+			}
+
+			.trackpad-demo.is-swipe-up .trackpad-demo_finger.is-left {
+				left: 0.875rem;
+				bottom: 0;
+			}
+
+			.trackpad-demo.is-swipe-up .trackpad-demo_finger.is-right {
+				right: 0.875rem;
+				bottom: 0;
+			}
+
+			.trackpad-demo.is-pinch-in .trackpad-demo_finger,
+			.trackpad-demo.is-pinch-out .trackpad-demo_finger {
+				width: var(--finger-size-small);
+				height: var(--finger-size-small);
+			}
+
+			.trackpad-demo.is-pinch-in .trackpad-demo_finger::before,
+			.trackpad-demo.is-pinch-out .trackpad-demo_finger::before {
+				left: 50%;
+				top: 50%;
+				width: var(--finger-size-small);
+				height: 3.25rem;
+				transform-origin: 50% 0;
+				border-radius: 0 0 999rem 999rem;
+				background: linear-gradient(
+					180deg,
+					var(--color-trail-strong) 0%,
+					var(--color-trail-soft) 100%
+				);
+				filter: blur(0.25rem);
+				clip-path: inset(-0.5rem 0 -0.5rem 0 round 0 0 999rem 999rem);
+				opacity: 0;
+			}
+
+			.trackpad-demo.is-pinch-in .trackpad-demo_finger.is-a {
+				left: 24%;
+				top: 64%;
+				animation: pinch-in-a var(--gesture-duration) var(--gesture-ease) infinite;
+			}
+
+			.trackpad-demo.is-pinch-in .trackpad-demo_finger.is-a::before {
+				transform: translate(-50%, 0) rotate(45deg);
+				animation: pinch-trail var(--gesture-duration) ease-in-out infinite;
+			}
+
+			.trackpad-demo.is-pinch-in .trackpad-demo_finger.is-b {
+				left: 66%;
+				top: 20%;
+				animation: pinch-in-b var(--gesture-duration) var(--gesture-ease) infinite;
+			}
+
+			.trackpad-demo.is-pinch-in .trackpad-demo_finger.is-b::before {
+				transform: translate(-50%, 0) rotate(225deg);
+				animation: pinch-trail var(--gesture-duration) ease-in-out infinite;
+			}
+
+			.trackpad-demo.is-pinch-out .trackpad-demo_finger {
+				width: var(--finger-size);
+				height: var(--finger-size);
+			}
+
+			.trackpad-demo.is-pinch-out .trackpad-demo_finger::before {
+				width: var(--finger-size);
+				height: 3.875rem;
+			}
+
+			.trackpad-demo.is-pinch-out .trackpad-demo_finger.is-a {
+				left: 48%;
+				top: 40%;
+				animation: pinch-out-a var(--gesture-duration) var(--gesture-ease) infinite;
+			}
+
+			.trackpad-demo.is-pinch-out .trackpad-demo_finger.is-a::before {
+				transform: translate(-50%, 0) rotate(45deg);
+				animation: pinch-trail var(--gesture-duration) ease-in-out infinite;
+			}
+
+			.trackpad-demo.is-pinch-out .trackpad-demo_finger.is-b {
+				left: 40%;
+				top: 48%;
+				animation: pinch-out-b var(--gesture-duration) var(--gesture-ease) infinite;
+			}
+
+			.trackpad-demo.is-pinch-out .trackpad-demo_finger.is-b::before {
+				transform: translate(-50%, 0) rotate(225deg);
+				animation: pinch-trail var(--gesture-duration) ease-in-out infinite;
+			}
+
+			.trackpad-demo.is-swipe-left .trackpad-demo_finger {
+				width: var(--finger-size);
+				height: var(--finger-size);
+				animation: swipe-left-finger var(--gesture-duration) var(--gesture-ease) infinite;
+			}
+
+			.trackpad-demo.is-swipe-left .trackpad-demo_finger::before {
+				left: 50%;
+				top: 50%;
+				width: 2.5rem;
+				height: var(--finger-size);
+				transform: translate(0, -50%);
+				border-radius: 999rem 0 0 999rem;
+				background: linear-gradient(
+					90deg,
+					var(--color-trail-soft) 0%,
+					var(--color-trail-strong) 100%
+				);
+				filter: blur(0.125rem);
+				clip-path: inset(0 -0.5rem 0 -0.5rem round 999rem 0 0 999rem);
+				opacity: 0;
+				animation: swipe-left-trail var(--gesture-duration) ease-in-out infinite;
+			}
+
+			.trackpad-demo.is-swipe-left .trackpad-demo_finger.is-top {
+				left: 72%;
+				top: 38%;
+			}
+
+			.trackpad-demo.is-swipe-left .trackpad-demo_finger.is-bottom {
+				left: 72%;
+				top: 54%;
+			}
+
+			@keyframes finger-fill {
+				0%,
+				14%,
+				82%,
+				100% {
+					opacity: 0;
+				}
+				18%,
+				74% {
+					opacity: 1;
+				}
+			}
+
+			@keyframes swipe-up-finger {
+				0% {
+					transform: translateY(0);
+					opacity: 0;
+				}
+				12% {
+					transform: translateY(0);
+					opacity: 0.3;
+				}
+				22% {
+					transform: translateY(0);
+					opacity: 1;
+				}
+				42% {
+					transform: translateY(-2.875rem);
+					opacity: 1;
+				}
+				74% {
+					transform: translateY(-2.875rem);
+					opacity: 1;
+				}
+				90% {
+					transform: translateY(-2.875rem);
+					opacity: 0.16;
+				}
+				100% {
+					transform: translateY(-2.875rem);
+					opacity: 0;
+				}
+			}
+
+			@keyframes swipe-up-trail {
+				0%,
+				22% {
+					opacity: 0;
+					height: 0;
+					width: 1.375rem;
+				}
+				24% {
+					opacity: 0.55;
+					height: 0.75rem;
+					width: 1.375rem;
+				}
+				32% {
+					opacity: 0.95;
+					height: 2.125rem;
+					width: 1.375rem;
+				}
+				44% {
+					opacity: 0.34;
+					height: 0.875rem;
+					width: 1.375rem;
+				}
+				52%,
+				100% {
+					opacity: 0;
+					height: 0;
+					width: 1.375rem;
+				}
+			}
+
+			@keyframes pinch-in-a {
+				0% { transform: translate(0, 0); opacity: 0; }
+				12% { transform: translate(0, 0); opacity: 0.3; }
+				22% { transform: translate(0, 0); opacity: 1; }
+				42% { transform: translate(2rem, -2rem); opacity: 1; }
+				74% { transform: translate(2rem, -2rem); opacity: 1; }
+				90% { transform: translate(2rem, -2rem); opacity: 0.16; }
+				100% { transform: translate(2rem, -2rem); opacity: 0; }
+			}
+
+			@keyframes pinch-in-b {
+				0% { transform: translate(0, 0); opacity: 0; }
+				12% { transform: translate(0, 0); opacity: 0.3; }
+				22% { transform: translate(0, 0); opacity: 1; }
+				42% { transform: translate(-2rem, 2rem); opacity: 1; }
+				74% { transform: translate(-2rem, 2rem); opacity: 1; }
+				90% { transform: translate(-2rem, 2rem); opacity: 0.16; }
+				100% { transform: translate(-2rem, 2rem); opacity: 0; }
+			}
+
+			@keyframes pinch-out-a {
+				0% { transform: translate(0, 0); opacity: 0; }
+				12% { transform: translate(0, 0); opacity: 0.3; }
+				22% { transform: translate(0, 0); opacity: 1; }
+				42% { transform: translate(2.625rem, -2.625rem); opacity: 1; }
+				74% { transform: translate(2.625rem, -2.625rem); opacity: 1; }
+				90% { transform: translate(2.625rem, -2.625rem); opacity: 0.16; }
+				100% { transform: translate(2.625rem, -2.625rem); opacity: 0; }
+			}
+
+			@keyframes pinch-out-b {
+				0% { transform: translate(0, 0); opacity: 0; }
+				12% { transform: translate(0, 0); opacity: 0.3; }
+				22% { transform: translate(0, 0); opacity: 1; }
+				42% { transform: translate(-2.625rem, 2.625rem); opacity: 1; }
+				74% { transform: translate(-2.625rem, 2.625rem); opacity: 1; }
+				90% { transform: translate(-2.625rem, 2.625rem); opacity: 0.16; }
+				100% { transform: translate(-2.625rem, 2.625rem); opacity: 0; }
+			}
+
+			@keyframes pinch-trail {
+				0%,
+				22% {
+					opacity: 0;
+					height: 0;
+				}
+				24% {
+					opacity: 0.55;
+					height: 0.625rem;
+				}
+				32% {
+					opacity: 0.95;
+					height: 1.5rem;
+				}
+				44% {
+					opacity: 0.34;
+					height: 0.625rem;
+				}
+				52%,
+				100% {
+					opacity: 0;
+					height: 0;
+				}
+			}
+
+			@keyframes swipe-left-finger {
+				0% { transform: translateX(0); opacity: 0; }
+				12% { transform: translateX(0); opacity: 0.3; }
+				22% { transform: translateX(0); opacity: 1; }
+				42% { transform: translateX(-2.5rem); opacity: 1; }
+				74% { transform: translateX(-2.5rem); opacity: 1; }
+				90% { transform: translateX(-2.5rem); opacity: 0.16; }
+				100% { transform: translateX(-2.5rem); opacity: 0; }
+			}
+
+			@keyframes swipe-left-trail {
+				0%,
+				22% {
+					opacity: 0;
+					width: 0;
+				}
+				24% {
+					opacity: 0.45;
+					width: 0.625rem;
+				}
+				32% {
+					opacity: 0.78;
+					width: 1.75rem;
+				}
+				44% {
+					opacity: 0.28;
+					width: 0.625rem;
+				}
+				52%,
+				100% {
+					opacity: 0;
+					width: 0;
+				}
+			}
+
+			@media (max-width: 47.9375rem) {
+				.gesture-grid {
+					grid-template-columns: 1fr;
+				}
+
+				.gesture-card_visual {
+					min-height: 10rem;
+				}
+
+				.trackpad-demo {
+					width: min(100%, 13rem);
+					border-width: 0.1875rem;
+				}
+
+				.trackpad-demo.is-swipe-up .trackpad-demo_finger {
+					width: 1.125rem;
+					height: 1.125rem;
+				}
+
+				.trackpad-demo.is-swipe-up .trackpad-demo_finger::before {
+					width: 1.125rem;
+				}
+
+				.trackpad-demo.is-pinch-in .trackpad-demo_finger,
+				.trackpad-demo.is-pinch-out .trackpad-demo_finger,
+				.trackpad-demo.is-swipe-left .trackpad-demo_finger {
+					width: 1.125rem;
+					height: 1.125rem;
+				}
+
+				.trackpad-demo.is-pinch-in .trackpad-demo_finger::before,
+				.trackpad-demo.is-pinch-out .trackpad-demo_finger::before {
+					width: 1.125rem;
+				}
+
+				.trackpad-demo.is-swipe-left .trackpad-demo_finger::before {
+					height: 1.125rem;
+				}
+			}
+
+			.wf-design-mode .gesture-card {
+				background: rgba(255, 255, 255, 0.06);
+			}
+		</style>
+	</head>
+	<body>
+		<div class="page_wrap">
+			<div class="page_padding">
+				<div class="gesture-grid">
+					<div class="gesture-card">
+						<div class="gesture-card_label-wrap">
+							<h2 class="gesture-card_title">Swipe Up</h2>
+							<p class="gesture-card_label">Two-finger vertical gesture.</p>
+						</div>
+						<div class="gesture-card_visual">
+							<div class="trackpad-demo is-swipe-up" aria-label="Trackpad swipe up animation">
+								<div class="trackpad-demo_gesture" aria-hidden="true">
+									<div class="trackpad-demo_finger is-left"></div>
+									<div class="trackpad-demo_finger is-right"></div>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<div class="gesture-card">
+						<div class="gesture-card_label-wrap">
+							<h2 class="gesture-card_title">Pinch In</h2>
+							<p class="gesture-card_label">Two fingers move toward center.</p>
+						</div>
+						<div class="gesture-card_visual">
+							<div class="trackpad-demo is-pinch-in" aria-label="Trackpad pinch in animation">
+								<div class="trackpad-demo_gesture" aria-hidden="true">
+									<div class="trackpad-demo_finger is-a"></div>
+									<div class="trackpad-demo_finger is-b"></div>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<div class="gesture-card">
+						<div class="gesture-card_label-wrap">
+							<h2 class="gesture-card_title">Pinch Out</h2>
+							<p class="gesture-card_label">Two fingers spread outward.</p>
+						</div>
+						<div class="gesture-card_visual">
+							<div class="trackpad-demo is-pinch-out" aria-label="Trackpad pinch out animation">
+								<div class="trackpad-demo_gesture" aria-hidden="true">
+									<div class="trackpad-demo_finger is-a"></div>
+									<div class="trackpad-demo_finger is-b"></div>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<div class="gesture-card">
+						<div class="gesture-card_label-wrap">
+							<h2 class="gesture-card_title">Swipe Left</h2>
+							<p class="gesture-card_label">Two-finger horizontal gesture.</p>
+						</div>
+						<div class="gesture-card_visual">
+							<div class="trackpad-demo is-swipe-left" aria-label="Trackpad swipe left animation">
+								<div class="trackpad-demo_gesture" aria-hidden="true">
+									<div class="trackpad-demo_finger is-top"></div>
+									<div class="trackpad-demo_finger is-bottom"></div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</body>
+</html>

@@ -4046,6 +4046,67 @@ var zoom = (function(){
 				});
 			}
 
+			function getManagedSlideVideos() {
+				const slidesElement = Reveal.getSlidesElement?.() || slidesRoot;
+				return Array.from(
+					slidesElement?.querySelectorAll('section video[autoplay], section video[data-autoplay]') || []
+				).filter((video) => !video.closest('.slide-background'));
+			}
+
+			function isVideoOnActiveSlide(video) {
+				if (!video || isOverviewActive()) {
+					return false;
+				}
+
+				const slide = video.closest('.slides section');
+				return !!slide && !slide.classList.contains('stack') && slide.classList.contains('present');
+			}
+
+			function isVideoInViewport(video) {
+				if (!video) {
+					return false;
+				}
+
+				const rect = video.getBoundingClientRect();
+				const viewportWidth = window.visualViewport?.width || window.innerWidth || document.documentElement.clientWidth || 0;
+				const viewportHeight = window.visualViewport?.height || window.innerHeight || document.documentElement.clientHeight || 0;
+
+				if (rect.width <= 0 || rect.height <= 0 || viewportWidth <= 0 || viewportHeight <= 0) {
+					return false;
+				}
+
+				const visibleWidth = Math.max(0, Math.min(rect.right, viewportWidth) - Math.max(rect.left, 0));
+				const visibleHeight = Math.max(0, Math.min(rect.bottom, viewportHeight) - Math.max(rect.top, 0));
+				const visibleArea = visibleWidth * visibleHeight;
+				const totalArea = rect.width * rect.height;
+
+				return totalArea > 0 && visibleArea / totalArea >= 0.6;
+			}
+
+			function syncManagedSlideVideos() {
+				const shouldAllowPlayback = !document.hidden && !isOverviewActive();
+
+				getManagedSlideVideos().forEach((video) => {
+					const shouldPlay = shouldAllowPlayback && isVideoOnActiveSlide(video) && isVideoInViewport(video);
+
+					if (shouldPlay) {
+						if (video.paused) {
+							const playPromise = video.play();
+							if (playPromise && typeof playPromise.catch === 'function') {
+								playPromise.catch(() => {});
+							}
+						}
+						delete video.dataset.pausedByDirectionalDeck;
+						return;
+					}
+
+					if (!video.paused) {
+						video.dataset.pausedByDirectionalDeck = 'true';
+						video.pause();
+					}
+				});
+			}
+
 			function syncTransposedOverview() {
 				// Overview behavior now lives in the transposed Reveal fork.
 			}
@@ -4458,6 +4519,7 @@ var zoom = (function(){
 				updateHelperTip();
 				syncTransposedOverview();
 				requestAnimationFrame(() => {
+					syncManagedSlideVideos();
 				});
 			});
 			Reveal.on('overviewshown', () => {
@@ -4465,11 +4527,15 @@ var zoom = (function(){
 				updateHelperTip();
 				requestAnimationFrame(() => {
 					syncTransposedOverview();
+					syncManagedSlideVideos();
 				});
 			});
 			Reveal.on('overviewhidden', () => {
 				syncDirectionalRuntimeClasses();
 				updateHelperTip();
+				requestAnimationFrame(() => {
+					syncManagedSlideVideos();
+				});
 			});
 			Reveal.on('slidechanged', (event) => {
 				syncDirectionalRuntimeClasses();
@@ -4485,6 +4551,7 @@ var zoom = (function(){
 				updateHelperTip();
 				syncTransposedOverview();
 				requestAnimationFrame(() => {
+					syncManagedSlideVideos();
 				});
 			});
 
@@ -4492,12 +4559,17 @@ var zoom = (function(){
 				requestAnimationFrame(() => {
 					syncDirectionalRuntimeClasses();
 					syncTransposedOverview();
+					syncManagedSlideVideos();
 				});
 			});
 			window.visualViewport?.addEventListener('resize', () => {
 				requestAnimationFrame(() => {
 					syncDirectionalRuntimeClasses();
+					syncManagedSlideVideos();
 				});
 			});
+			window.addEventListener('scroll', syncManagedSlideVideos, { passive: true });
+			window.visualViewport?.addEventListener('scroll', syncManagedSlideVideos, { passive: true });
+			document.addEventListener('visibilitychange', syncManagedSlideVideos);
 
 			updateHelperTip();
