@@ -230,15 +230,16 @@ class Ci {
    */
   load(e, t = {}) {
     const i = this.Reveal.getConfig().display;
+    const a0 = e.classList.contains("stack") || e.querySelector(":scope > section") !== null;
     if (i.includes("!important")) {
       const a = i.replace(/\s*!important\s*$/, "").trim();
       e.style.setProperty("display", a, "important");
     } else
       e.style.display = i;
-    E(e, "img[data-src], video[data-src], audio[data-src], iframe[data-src]").forEach((a) => {
+    a0 || E(e, "img[data-src], video[data-src], audio[data-src], iframe[data-src]").forEach((a) => {
       const n = a.tagName === "IFRAME";
       (!n || this.shouldPreload(a)) && (this.logMediaDebug("load:data-src->src", { tagName: a.tagName, slideId: e.getAttribute("data-deck-slide") || e.id || null, src: a.getAttribute("data-src"), isIframe: n, shouldPreload: n ? this.shouldPreload(a) : null }), a.setAttribute("src", a.getAttribute("data-src")), a.setAttribute("data-lazy-loaded", ""), a.removeAttribute("data-src"), n && a.addEventListener("load", this.preventIframeAutoFocus));
-    }), E(e, "video, audio").forEach((a) => {
+    }), a0 || E(e, "video, audio").forEach((a) => {
       let n = 0;
       E(a, "source[data-src]").forEach((o) => {
         this.logMediaDebug("load:source-data-src->src", { tagName: a.tagName, slideId: e.getAttribute("data-deck-slide") || e.id || null, src: o.getAttribute("data-src") }), o.setAttribute("src", o.getAttribute("data-src")), o.removeAttribute("data-src"), o.setAttribute("data-lazy-loaded", ""), n += 1;
@@ -295,14 +296,15 @@ class Ci {
    */
   unload(e) {
     e.style.display = "none";
-    let t = this.Reveal.getSlideBackground(e);
-    t && (t.style.display = "none", E(t, "iframe[src]").forEach((i) => {
-      i.removeAttribute("src");
-    })), E(e, "iframe[data-lazy-loaded][src]").forEach((i) => {
-      this.logMediaDebug("unload:src->data-src", { tagName: i.tagName, slideId: e.getAttribute("data-deck-slide") || e.id || null, src: i.getAttribute("src"), currentSrc: i.currentSrc || null, paused: typeof i.paused == "boolean" ? i.paused : null }), i.setAttribute("data-src", i.getAttribute("src")), i.removeAttribute("src");
-    }), E(e, "audio[data-lazy-loaded] source[src]").forEach((i) => {
-      this.logMediaDebug("unload:source-src->data-src", { tagName: (i.parentElement == null ? void 0 : i.parentElement.tagName) || i.tagName, slideId: e.getAttribute("data-deck-slide") || e.id || null, src: i.getAttribute("src") }), i.setAttribute("data-src", i.getAttribute("src")), i.removeAttribute("src");
-    });
+    const t = e.classList.contains("stack") || e.querySelector(":scope > section") !== null;
+    let i = this.Reveal.getSlideBackground(e);
+    i && (i.style.display = "none", E(i, "iframe[src]").forEach((a) => {
+      a.removeAttribute("src");
+    })), t || E(e, "iframe[data-lazy-loaded][src]").forEach((a) => {
+      this.logMediaDebug("unload:src->data-src", { tagName: a.tagName, slideId: e.getAttribute("data-deck-slide") || e.id || null, src: a.getAttribute("src"), currentSrc: a.currentSrc || null, paused: typeof a.paused == "boolean" ? a.paused : null }), a.setAttribute("data-src", a.getAttribute("src")), a.removeAttribute("src");
+    }), t || E(e, "audio[data-lazy-loaded] source[src]").forEach((a) => {
+      this.logMediaDebug("unload:source-src->data-src", { tagName: (a.parentElement == null ? void 0 : a.parentElement.tagName) || a.tagName, slideId: e.getAttribute("data-deck-slide") || e.id || null, src: a.getAttribute("src") }), a.setAttribute("data-src", a.getAttribute("src")), a.removeAttribute("src");
+    }), t && this.logMediaDebug("unload:skip-stack-media", { slideId: e.getAttribute("data-deck-slide") || e.id || null, className: e.className });
   }
   /**
    * Enforces origin-specific format rules for embedded media.
