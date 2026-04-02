@@ -236,10 +236,10 @@ class Ci {
       e.style.setProperty("display", a, "important");
     } else
       e.style.display = i;
-    a0 || E(e, "img[data-src], video[data-src], audio[data-src], iframe[data-src]").forEach((a) => {
+    a0 || E(e, "img[data-src], audio[data-src], iframe[data-src]").forEach((a) => {
       const n = a.tagName === "IFRAME";
       (!n || this.shouldPreload(a)) && (this.logMediaDebug("load:data-src->src", { tagName: a.tagName, slideId: e.getAttribute("data-deck-slide") || e.id || null, src: a.getAttribute("data-src"), isIframe: n, shouldPreload: n ? this.shouldPreload(a) : null }), a.setAttribute("src", a.getAttribute("data-src")), a.setAttribute("data-lazy-loaded", ""), a.removeAttribute("data-src"), n && a.addEventListener("load", this.preventIframeAutoFocus));
-    }), a0 || E(e, "video, audio").forEach((a) => {
+    }), a0 || E(e, "audio").forEach((a) => {
       let n = 0;
       E(a, "source[data-src]").forEach((o) => {
         this.logMediaDebug("load:source-data-src->src", { tagName: a.tagName, slideId: e.getAttribute("data-deck-slide") || e.id || null, src: o.getAttribute("data-src") }), o.setAttribute("src", o.getAttribute("data-src")), o.removeAttribute("data-src"), o.setAttribute("data-lazy-loaded", ""), n += 1;
@@ -3799,6 +3799,10 @@ var zoom = (function(){
 				return sizes.length ? sizes : [1];
 			})();
 			const logicalGroupProgress = new Map([[0, 0]]);
+			const mobileHashState = {
+				applying: false,
+				lastSerialized: null,
+			};
 			const controlsRoot = () => document.querySelector('.deck_controls');
 			const helperTip = document.querySelector('.deck_helper-tip');
 			const helperIconColor = 'white';
@@ -3923,6 +3927,83 @@ var zoom = (function(){
 				const nextPhysical = toPhysicalIndices(nextLogical);
 
 				Reveal.slide(nextPhysical.h, nextPhysical.v, nextPhysical.f);
+			}
+
+			function parseMobileDeckHash(hash = window.location.hash) {
+				const flatMatch = hash.match(/^#\/(\d+)$/);
+				if (flatMatch) {
+					let flatIndex = Math.max(0, Number(flatMatch[1] || 1) - 1);
+					let groupIndex = 0;
+
+					while (groupIndex < groupSizes.length) {
+						const groupSize = groupSizes[groupIndex] || 1;
+						if (flatIndex < groupSize) {
+							return {
+								h: flatIndex,
+								v: groupIndex,
+								f: 0,
+							};
+						}
+
+						flatIndex -= groupSize;
+						groupIndex += 1;
+					}
+
+					const lastGroupIndex = Math.max(0, groupSizes.length - 1);
+					return {
+						h: Math.max(0, (groupSizes[lastGroupIndex] || 1) - 1),
+						v: lastGroupIndex,
+						f: 0,
+					};
+				}
+
+				const parsedIndices = Reveal.location?.getIndicesFromHash?.(hash);
+				return parsedIndices ? toLogicalIndices(parsedIndices) : null;
+			}
+
+			function serializeMobileDeckHash(indices = getLogicalIndices()) {
+				const safeIndices = {
+					h: clampIndex(toNumber(indices.h, 0), 0, getGroupLength(indices.v) - 1),
+					v: clampIndex(toNumber(indices.v, 0), 0, groupSizes.length - 1),
+				};
+				let flatIndex = safeIndices.h;
+
+				for (let groupIndex = 0; groupIndex < safeIndices.v; groupIndex += 1) {
+					flatIndex += groupSizes[groupIndex] || 0;
+				}
+
+				return `#/${flatIndex + 1}`;
+			}
+
+			function replaceMobileDeckHash(indices = getLogicalIndices()) {
+				if (!isMobileDeck || mobileHashState.applying) {
+					return;
+				}
+
+				const nextHash = serializeMobileDeckHash(indices);
+				if (nextHash === mobileHashState.lastSerialized && window.location.hash === nextHash) {
+					return;
+				}
+
+				mobileHashState.lastSerialized = nextHash;
+				history.replaceState(null, '', `${window.location.pathname}${window.location.search}${nextHash}`);
+			}
+
+			function applyMobileDeckHash(hash = window.location.hash) {
+				if (!isMobileDeck) {
+					return;
+				}
+
+				const nextIndices = parseMobileDeckHash(hash);
+				if (!nextIndices) {
+					return;
+				}
+
+				mobileHashState.applying = true;
+				slideLogical(nextIndices.h, nextIndices.v, nextIndices.f || 0);
+				requestAnimationFrame(() => {
+					mobileHashState.applying = false;
+				});
 			}
 
 			function navigateLogical(direction) {
@@ -4122,10 +4203,65 @@ var zoom = (function(){
 				return totalArea > 0 && visibleArea / totalArea >= 0.6;
 			}
 
+			function getVideoLogicalDistance(video) {
+				const slide = video?.closest('.slides section');
+				if (!slide) {
+					return Number.POSITIVE_INFINITY;
+				}
+
+				const current = getLogicalIndices();
+				const target = getLogicalIndices(slide);
+				return Math.abs((target.v ?? 0) - (current.v ?? 0)) + Math.abs((target.h ?? 0) - (current.h ?? 0));
+			}
+
+			function ensureManagedVideoLoaded(video) {
+				if (!video) {
+					return;
+				}
+
+				if (video.dataset.directionalLoaded === 'true') {
+					return;
+				}
+
+				const directSrc = video.getAttribute('data-src');
+				if (directSrc && !video.getAttribute('src')) {
+					video.setAttribute('src', directSrc);
+					video.removeAttribute('data-src');
+					video.dataset.directionalLoaded = 'true';
+					console.log('[directional media]', 'ensureManagedVideoLoaded:video-src', JSON.stringify({
+						slideId: video.closest('[data-deck-slide]')?.getAttribute('data-deck-slide') || null,
+						src: directSrc,
+					}));
+					return;
+				}
+
+				let sources = 0;
+				video.querySelectorAll('source[data-src]').forEach((source) => {
+					source.setAttribute('src', source.getAttribute('data-src'));
+					source.removeAttribute('data-src');
+					sources += 1;
+				});
+
+				if (sources > 0) {
+					video.dataset.directionalLoaded = 'true';
+					console.log('[directional media]', 'ensureManagedVideoLoaded:source-src', JSON.stringify({
+						slideId: video.closest('[data-deck-slide]')?.getAttribute('data-deck-slide') || null,
+						sources,
+					}));
+					video.load();
+				}
+			}
+
 			function syncManagedSlideVideos() {
 				const shouldAllowPlayback = !document.hidden && !isOverviewActive();
+				const preloadDistance = 3;
 
 				getManagedSlideVideos().forEach((video) => {
+					const logicalDistance = getVideoLogicalDistance(video);
+					const shouldPreload = logicalDistance <= preloadDistance;
+					if (shouldPreload) {
+						ensureManagedVideoLoaded(video);
+					}
 					const shouldPlay = shouldAllowPlayback && isVideoOnActiveSlide(video) && isVideoInViewport(video);
 					console.log('[directional media]', 'syncManagedSlideVideos', JSON.stringify({
 						slideId: video.closest('[data-deck-slide]')?.getAttribute('data-deck-slide') || null,
@@ -4134,6 +4270,8 @@ var zoom = (function(){
 						currentSrc: video.currentSrc || null,
 						paused: video.paused,
 						readyState: video.readyState,
+						logicalDistance,
+						shouldPreload,
 						shouldAllowPlayback,
 						shouldPlay,
 						onActiveSlide: isVideoOnActiveSlide(video),
@@ -4534,6 +4672,10 @@ var zoom = (function(){
 				revealElement.addEventListener('touchmove', handleMobileTouchMove, { passive: false });
 				revealElement.addEventListener('touchend', handleMobileTouchEnd, { passive: true });
 				revealElement.addEventListener('touchcancel', handleMobileTouchEnd, { passive: true });
+
+				window.addEventListener('hashchange', () => {
+					applyMobileDeckHash();
+				});
 			}
 
 			if (isDualMode) {
@@ -4561,6 +4703,21 @@ var zoom = (function(){
 						indexv: logicalIndices.v,
 						indexf: event.indexf || 0,
 					});
+				});
+
+			} else if (isMobileDeck) {
+				Reveal.on('ready', () => {
+					const initialHash = parseMobileDeckHash();
+					if (initialHash) {
+						applyMobileDeckHash();
+					}
+					else {
+						replaceMobileDeckHash(getLogicalIndices());
+					}
+				});
+
+				Reveal.on('slidechanged', () => {
+					replaceMobileDeckHash(getLogicalIndices());
 				});
 
 			}
