@@ -206,6 +206,9 @@ class Ci {
       }), this.clearMediaPlaybackErrors();
     });
   }
+  logMediaDebug(e, t = {}) {
+    typeof window != "undefined" && window.__REVEAL_MEDIA_DEBUG__ === !0 && console.log("[reveal media]", e, t);
+  }
   /**
    * Should the given element be preloaded?
    * Decides based on local element attributes and global config.
@@ -234,12 +237,12 @@ class Ci {
       e.style.display = i;
     E(e, "img[data-src], video[data-src], audio[data-src], iframe[data-src]").forEach((a) => {
       const n = a.tagName === "IFRAME";
-      (!n || this.shouldPreload(a)) && (a.setAttribute("src", a.getAttribute("data-src")), a.setAttribute("data-lazy-loaded", ""), a.removeAttribute("data-src"), n && a.addEventListener("load", this.preventIframeAutoFocus));
+      (!n || this.shouldPreload(a)) && (this.logMediaDebug("load:data-src->src", { tagName: a.tagName, slideId: e.getAttribute("data-deck-slide") || e.id || null, src: a.getAttribute("data-src"), isIframe: n, shouldPreload: n ? this.shouldPreload(a) : null }), a.setAttribute("src", a.getAttribute("data-src")), a.setAttribute("data-lazy-loaded", ""), a.removeAttribute("data-src"), n && a.addEventListener("load", this.preventIframeAutoFocus));
     }), E(e, "video, audio").forEach((a) => {
       let n = 0;
       E(a, "source[data-src]").forEach((o) => {
-        o.setAttribute("src", o.getAttribute("data-src")), o.removeAttribute("data-src"), o.setAttribute("data-lazy-loaded", ""), n += 1;
-      }), le && a.tagName === "VIDEO" && a.setAttribute("playsinline", ""), n > 0 && a.load();
+        this.logMediaDebug("load:source-data-src->src", { tagName: a.tagName, slideId: e.getAttribute("data-deck-slide") || e.id || null, src: o.getAttribute("data-src") }), o.setAttribute("src", o.getAttribute("data-src")), o.removeAttribute("data-src"), o.setAttribute("data-lazy-loaded", ""), n += 1;
+      }), le && a.tagName === "VIDEO" && a.setAttribute("playsinline", ""), n > 0 && (this.logMediaDebug("media.load()", { tagName: a.tagName, slideId: e.getAttribute("data-deck-slide") || e.id || null, sources: n }), a.load());
     });
     let s = e.slideBackgroundElement;
     if (s) {
@@ -296,9 +299,9 @@ class Ci {
     t && (t.style.display = "none", E(t, "iframe[src]").forEach((i) => {
       i.removeAttribute("src");
     })), E(e, "video[data-lazy-loaded][src], audio[data-lazy-loaded][src], iframe[data-lazy-loaded][src]").forEach((i) => {
-      i.setAttribute("data-src", i.getAttribute("src")), i.removeAttribute("src");
+      this.logMediaDebug("unload:src->data-src", { tagName: i.tagName, slideId: e.getAttribute("data-deck-slide") || e.id || null, src: i.getAttribute("src"), currentSrc: i.currentSrc || null, paused: typeof i.paused == "boolean" ? i.paused : null }), i.setAttribute("data-src", i.getAttribute("src")), i.removeAttribute("src");
     }), E(e, "video[data-lazy-loaded] source[src], audio source[src]").forEach((i) => {
-      i.setAttribute("data-src", i.getAttribute("src")), i.removeAttribute("src");
+      this.logMediaDebug("unload:source-src->data-src", { tagName: (i.parentElement == null ? void 0 : i.parentElement.tagName) || i.tagName, slideId: e.getAttribute("data-deck-slide") || e.id || null, src: i.getAttribute("src") }), i.setAttribute("data-src", i.getAttribute("src")), i.removeAttribute("src");
     });
   }
   /**
@@ -375,6 +378,7 @@ class Ci {
    * @param {HTMLElement} mediaElement
    */
   playMediaElement(e) {
+    this.logMediaDebug("play()", { tagName: e.tagName, src: e.getAttribute("src"), currentSrc: e.currentSrc || null, paused: e.paused, readyState: e.readyState });
     const t = e.play();
     t && typeof t.catch == "function" && t.then(() => {
       e.muted || (this.allowedToPlayAudio = !0);
@@ -4098,6 +4102,20 @@ var zoom = (function(){
 
 				getManagedSlideVideos().forEach((video) => {
 					const shouldPlay = shouldAllowPlayback && isVideoOnActiveSlide(video) && isVideoInViewport(video);
+					if (window.__REVEAL_MEDIA_DEBUG__ === true) {
+						console.log('[directional media]', 'syncManagedSlideVideos', {
+							slideId: video.closest('[data-deck-slide]')?.getAttribute('data-deck-slide') || null,
+							src: video.getAttribute('src'),
+							dataSrc: video.getAttribute('data-src'),
+							currentSrc: video.currentSrc || null,
+							paused: video.paused,
+							readyState: video.readyState,
+							shouldAllowPlayback,
+							shouldPlay,
+							onActiveSlide: isVideoOnActiveSlide(video),
+							inViewport: isVideoInViewport(video),
+						});
+					}
 
 					if (shouldPlay) {
 						if (video.paused) {

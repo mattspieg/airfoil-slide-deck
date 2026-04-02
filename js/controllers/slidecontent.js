@@ -50,6 +50,16 @@ export default class SlideContent {
 
 	}
 
+	logMediaDebug( action, payload = {} ) {
+
+		if( typeof window === 'undefined' || window.__REVEAL_MEDIA_DEBUG__ !== true ) {
+			return;
+		}
+
+		console.log( '[reveal media]', action, payload );
+
+	}
+
 	/**
 	 * Should the given element be preloaded?
 	 * Decides based on local element attributes and global config.
@@ -96,6 +106,13 @@ export default class SlideContent {
 		queryAll( slide, 'img[data-src], video[data-src], audio[data-src], iframe[data-src]' ).forEach( element => {
 			const isIframe = element.tagName === 'IFRAME';
 			if( !isIframe || this.shouldPreload( element ) ) {
+				this.logMediaDebug( 'load:data-src->src', {
+					tagName: element.tagName,
+					slideId: slide.getAttribute( 'data-deck-slide' ) || slide.id || null,
+					src: element.getAttribute( 'data-src' ),
+					isIframe,
+					shouldPreload: isIframe ? this.shouldPreload( element ) : null
+				} );
 				element.setAttribute( 'src', element.getAttribute( 'data-src' ) );
 				element.setAttribute( 'data-lazy-loaded', '' );
 				element.removeAttribute( 'data-src' );
@@ -111,6 +128,11 @@ export default class SlideContent {
 			let sources = 0;
 
 			queryAll( media, 'source[data-src]' ).forEach( source => {
+				this.logMediaDebug( 'load:source-data-src->src', {
+					tagName: media.tagName,
+					slideId: slide.getAttribute( 'data-deck-slide' ) || slide.id || null,
+					src: source.getAttribute( 'data-src' )
+				} );
 				source.setAttribute( 'src', source.getAttribute( 'data-src' ) );
 				source.removeAttribute( 'data-src' );
 				source.setAttribute( 'data-lazy-loaded', '' );
@@ -125,6 +147,11 @@ export default class SlideContent {
 			// If we rewrote sources for this video/audio element, we need
 			// to manually tell it to load from its new origin
 			if( sources > 0 ) {
+				this.logMediaDebug( 'media.load()', {
+					tagName: media.tagName,
+					slideId: slide.getAttribute( 'data-deck-slide' ) || slide.id || null,
+					sources
+				} );
 				media.load();
 			}
 		} );
@@ -275,12 +302,24 @@ export default class SlideContent {
 
 		// Reset lazy-loaded media elements with src attributes
 		queryAll( slide, 'video[data-lazy-loaded][src], audio[data-lazy-loaded][src], iframe[data-lazy-loaded][src]' ).forEach( element => {
+			this.logMediaDebug( 'unload:src->data-src', {
+				tagName: element.tagName,
+				slideId: slide.getAttribute( 'data-deck-slide' ) || slide.id || null,
+				src: element.getAttribute( 'src' ),
+				currentSrc: element.currentSrc || null,
+				paused: typeof element.paused === 'boolean' ? element.paused : null
+			} );
 			element.setAttribute( 'data-src', element.getAttribute( 'src' ) );
 			element.removeAttribute( 'src' );
 		} );
 
 		// Reset lazy-loaded media elements with <source> children
 		queryAll( slide, 'video[data-lazy-loaded] source[src], audio source[src]' ).forEach( source => {
+			this.logMediaDebug( 'unload:source-src->data-src', {
+				tagName: source.parentElement?.tagName || source.tagName,
+				slideId: slide.getAttribute( 'data-deck-slide' ) || slide.id || null,
+				src: source.getAttribute( 'src' )
+			} );
 			source.setAttribute( 'data-src', source.getAttribute( 'src' ) );
 			source.removeAttribute( 'src' );
 		} );
@@ -467,6 +506,14 @@ export default class SlideContent {
 	 * @param {HTMLElement} mediaElement
 	 */
 	playMediaElement( mediaElement ) {
+
+		this.logMediaDebug( 'play()', {
+			tagName: mediaElement.tagName,
+			src: mediaElement.getAttribute( 'src' ),
+			currentSrc: mediaElement.currentSrc || null,
+			paused: mediaElement.paused,
+			readyState: mediaElement.readyState
+		} );
 
 		const promise = mediaElement.play();
 

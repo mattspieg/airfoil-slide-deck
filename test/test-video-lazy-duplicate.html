@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>reveal.js - Lazy Duplicate Video Test</title>
+		<meta
+			name="viewport"
+			content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+		/>
+		<link rel="stylesheet" href="../dist/reveal.css" />
+		<link rel="stylesheet" href="../dist/theme/white.css" id="theme" />
+		<style>
+			.reveal .video-grid {
+				display: grid;
+				grid-template-columns: repeat(2, minmax(0, 1fr));
+				gap: 24px;
+				align-items: start;
+			}
+
+			.reveal video {
+				width: 100%;
+				border-radius: 12px;
+				background: #111;
+			}
+
+			.reveal pre {
+				max-height: 240px;
+				font-size: 18px;
+			}
+		</style>
+	</head>
+
+	<body>
+		<div class="reveal">
+			<div class="slides">
+				<section>
+					<h2>Lazy Duplicate Video Test</h2>
+					<p>Open DevTools network, then advance one slide.</p>
+					<p>Leave the video slide and watch Reveal move sources back to <code>data-src</code>.</p>
+				</section>
+
+				<section>
+					<h2>Two videos, one file, lazy loaded</h2>
+					<div class="video-grid">
+						<video
+							class="lazy-dup"
+							controls
+							muted
+							playsinline
+							preload="none"
+							data-autoplay
+							data-src="../slide%20deck/Embedded%20Videos/37.mp4"
+						></video>
+						<video
+							class="lazy-dup"
+							controls
+							muted
+							playsinline
+							preload="none"
+							data-autoplay
+							data-src="../slide%20deck/Embedded%20Videos/37.mp4"
+						></video>
+					</div>
+					<pre><code id="event-log">waiting for events...</code></pre>
+				</section>
+
+				<section>
+					<h2>Unload Check</h2>
+					<p>When you land here, Reveal should remove <code>src</code> from the prior slide’s videos.</p>
+				</section>
+			</div>
+		</div>
+
+		<script src="../dist/reveal.js"></script>
+		<script>
+			const logNode = document.getElementById('event-log');
+			const videos = Array.from(document.querySelectorAll('.lazy-dup'));
+			const eventNames = ['loadstart', 'loadedmetadata', 'loadeddata', 'canplay', 'play', 'pause', 'emptied'];
+
+			function writeLog(message) {
+				const next = `${new Date().toISOString()} ${message}`;
+				logNode.textContent = `${next}\n${logNode.textContent}`.trim();
+			}
+
+			videos.forEach((video, index) => {
+				eventNames.forEach((eventName) => {
+					video.addEventListener(eventName, () => {
+						writeLog(
+							`video ${index + 1} ${eventName} src=${video.getAttribute('src') || 'NONE'} data-src=${video.getAttribute('data-src') || 'NONE'} currentSrc=${video.currentSrc || 'NONE'}`
+						);
+					});
+				});
+			});
+
+			Reveal.initialize({ hash: true });
+
+			Reveal.on('slidechanged', () => {
+				videos.forEach((video, index) => {
+					writeLog(
+						`video ${index + 1} state src=${video.getAttribute('src') || 'NONE'} data-src=${video.getAttribute('data-src') || 'NONE'} networkState=${video.networkState}`
+					);
+				});
+			});
+		</script>
+	</body>
+</html>
