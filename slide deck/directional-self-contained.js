@@ -3773,14 +3773,19 @@ var zoom = (function(){
 			const controlsRoot = () => document.querySelector('.deck_controls');
 			const helperTip = document.querySelector('.deck_helper-tip');
 			const helperIconColor = 'white';
-			const deckMode = new URLSearchParams(window.location.search).get('mode');
-			const isDualMode = deckMode === 'normal' || deckMode === 'overview';
-			const isMobileDeck = deckMode === 'mobile';
-			const isOverviewDeck = deckMode === 'overview';
 			const isTouchDevice =
 				navigator.maxTouchPoints > 0 ||
 				'ontouchstart' in window ||
 				window.matchMedia('(pointer: coarse)').matches;
+			const deckMode = new URLSearchParams(window.location.search).get('mode');
+			const isDualMode = deckMode === 'normal' || deckMode === 'overview';
+			const isOverviewDeck = deckMode === 'overview';
+			// Plain /directional on touch devices should follow the same code path
+			// as the iframe-driven mobile view used by the dual shell.
+			const isMobileDeck = deckMode === 'mobile' || (!isDualMode && isTouchDevice);
+			function isUsingRevealScrollView() {
+				return typeof Reveal?.isScrollView === 'function' && Reveal.isScrollView();
+			}
 			const revealCanvas = {
 				width: 1600,
 				height: 900,
@@ -3929,7 +3934,7 @@ var zoom = (function(){
 			};
 
 			function handleMobileTouchStart(event) {
-				if (!isMobileDeck || !event.touches || event.touches.length !== 1) {
+				if (!isMobileDeck || isUsingRevealScrollView() || !event.touches || event.touches.length !== 1) {
 					return;
 				}
 
@@ -3941,7 +3946,7 @@ var zoom = (function(){
 			}
 
 			function handleMobileTouchMove(event) {
-				if (!isMobileDeck || !mobileSwipeState.active || mobileSwipeState.navigated || !event.touches || event.touches.length !== 1) {
+				if (!isMobileDeck || isUsingRevealScrollView() || !mobileSwipeState.active || mobileSwipeState.navigated || !event.touches || event.touches.length !== 1) {
 					return;
 				}
 
@@ -3977,6 +3982,11 @@ var zoom = (function(){
 			}
 
 			function handleMobileTouchEnd() {
+				if (isUsingRevealScrollView()) {
+					mobileSwipeState.active = false;
+					mobileSwipeState.navigated = false;
+					return;
+				}
 				mobileSwipeState.active = false;
 				mobileSwipeState.navigated = false;
 			}
