@@ -519,47 +519,39 @@
 				return end - start + 1;
 			});
 
-			function parseDeckHash() {
-				const match = window.location.hash.match(/^#\/(\d+)$/);
+			function parseDeckHash(hash = window.location.hash) {
+				const match = hash.match(/^#\/(\d+)(?:\/(\d+))?(?:\/(\d+))?$/);
 				if (!match) {
 					return null;
 				}
 
-				let flatIndex = Math.max(0, Number(match[1] || 1) - 1);
-				let groupIndex = 0;
+				const groupIndex = Math.min(
+					Math.max(0, Number(match[1] || 1) - 1),
+					Math.max(0, groupSizes.length - 1)
+				);
+				const slideIndex = Math.min(
+					Math.max(0, Number(match[2] || 1) - 1),
+					Math.max(0, (groupSizes[groupIndex] || 1) - 1)
+				);
 
-				while (groupIndex < groupSizes.length) {
-					const groupSize = groupSizes[groupIndex];
-					if (flatIndex < groupSize) {
-						return {
-							h: flatIndex,
-							v: groupIndex,
-							f: 0,
-						};
-					}
-
-					flatIndex -= groupSize;
-					groupIndex += 1;
-				}
-
-				const lastGroupIndex = Math.max(0, groupSizes.length - 1);
 				return {
-					h: Math.max(0, (groupSizes[lastGroupIndex] || 1) - 1),
-					v: lastGroupIndex,
-					f: 0,
+					h: slideIndex,
+					v: groupIndex,
+					f: Math.max(0, Number(match[3] || 0)),
 				};
 			}
 
 			function serializeDeckHash(indices) {
 				const h = Math.max(0, Number(indices?.h || 0));
 				const v = Math.max(0, Number(indices?.v || 0));
-				let flatIndex = h;
+				const f = Math.max(0, Number(indices?.f || 0));
+				let hash = `#/${v + 1}/${h + 1}`;
 
-				for (let groupIndex = 0; groupIndex < v; groupIndex += 1) {
-					flatIndex += groupSizes[groupIndex] || 0;
+				if (f > 0) {
+					hash += `/${f}`;
 				}
 
-				return `#/${flatIndex + 1}`;
+				return hash;
 			}
 
 			function replaceDeckHash(indices) {

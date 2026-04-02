@@ -281,6 +281,10 @@
 				return end - start + 1;
 			});
 			const logicalGroupProgress = new Map([[0, 0]]);
+			const groupedHashState = {
+				applying: false,
+				lastSerialized: null,
+			};
 			const assetPath = (index) => encodeURI(`source pngs/${index}.png`);
 			const controlsRoot = () => document.querySelector('.reveal .controls');
 			const helperTip = document.getElementById('helper-tip');
@@ -397,6 +401,115 @@
 					v: logicalItem,
 					f: toNumber(indices.f ?? indices.indexf, 0),
 				};
+			}
+
+			function parseGroupedDeckHash(hash, fallbackParser) {
+				const match = hash?.match(/^#\/(\d+)(?:\/(\d+))?(?:\/(\d+))?$/);
+				if (!match) {
+					return typeof fallbackParser === 'function' ? fallbackParser(hash) : null;
+				}
+
+				const logicalGroup = clampIndex(toNumber(match[1], 1) - 1, 0, groupSizes.length - 1);
+				const logicalSlide = clampIndex(toNumber(match[2] ?? 1, 1) - 1, 0, getGroupLength(logicalGroup) - 1);
+				const logicalIndices = {
+					h: logicalSlide,
+					v: logicalGroup,
+				};
+				const fragmentIndex = Number.parseInt(match[3] || '', 10);
+				if (Number.isFinite(fragmentIndex)) {
+					logicalIndices.f = fragmentIndex;
+				}
+
+				return logicalIndices;
+			}
+
+			function serializeGroupedDeckHash(indices = {}) {
+				const logicalGroup = clampIndex(toNumber(indices.v, 0), 0, groupSizes.length - 1);
+				const logicalSlide = clampIndex(toNumber(indices.h, 0), 0, getGroupLength(logicalGroup) - 1);
+				let hash = `/${logicalGroup + 1}/${logicalSlide + 1}`;
+
+				if (typeof indices.f === 'number' && indices.f >= 0) {
+					hash += `/${indices.f}`;
+				}
+
+				return hash;
+			}
+
+			function installGroupedHashModel() {
+				const locationController = Reveal.location;
+				if (!locationController || locationController.__deckGroupedHashInstalled) {
+					return;
+				}
+
+				const originalGetIndicesFromHash = locationController.getIndicesFromHash.bind(locationController);
+				const originalGetHash = locationController.getHash.bind(locationController);
+
+				locationController.getIndicesFromHash = (hash = window.location.hash, options = {}) => {
+					const groupedIndices = parseGroupedDeckHash(hash);
+					if (groupedIndices) {
+						return toPhysicalIndices(groupedIndices);
+					}
+
+					return originalGetIndicesFromHash(hash, options);
+				};
+
+				locationController.getHash = (slideElement) => {
+					const activeSlide = slideElement || Reveal.getCurrentSlide?.();
+					const slideId = activeSlide?.getAttribute?.('id');
+					if (slideId) {
+						return originalGetHash(slideElement);
+					}
+
+					const logicalIndices = getLogicalIndices(slideElement);
+					if (!Reveal.getConfig().fragmentInURL) {
+						delete logicalIndices.f;
+					}
+
+					return serializeGroupedDeckHash(logicalIndices);
+				};
+
+				locationController.__deckGroupedHashInstalled = true;
+			}
+
+			function parseDeckHashForRuntime(hash = window.location.hash) {
+				const groupedIndices = parseGroupedDeckHash(hash);
+				if (groupedIndices) {
+					return groupedIndices;
+				}
+
+				const parsedIndices = Reveal.location?.getIndicesFromHash?.(hash);
+				return parsedIndices ? toLogicalIndices(parsedIndices) : null;
+			}
+
+			function replaceDeckHashForRuntime(indices = getLogicalIndices()) {
+				if (isDualMode || groupedHashState.applying) {
+					return;
+				}
+
+				const nextHash = `#${serializeGroupedDeckHash(indices)}`;
+				if (nextHash === groupedHashState.lastSerialized && window.location.hash === nextHash) {
+					return;
+				}
+
+				groupedHashState.lastSerialized = nextHash;
+				history.replaceState(null, '', `${window.location.pathname}${window.location.search}${nextHash}`);
+			}
+
+			function applyDeckHashForRuntime(hash = window.location.hash) {
+				if (isDualMode) {
+					return;
+				}
+
+				const nextIndices = parseDeckHashForRuntime(hash);
+				if (!nextIndices) {
+					return;
+				}
+
+				groupedHashState.applying = true;
+				slideLogical(nextIndices.h, nextIndices.v, nextIndices.f || 0);
+				requestAnimationFrame(() => {
+					groupedHashState.applying = false;
+				});
 			}
 
 			function getLogicalIndices(slideElement) {
@@ -976,7 +1089,7 @@
 				plugins: [],
 			} : {
 				...revealCanvas,
-				hash: true,
+				hash: false,
 				controls: !isTouchDevice,
 				help: !isTouchDevice,
 				keyboard: keyboardBindings,
@@ -1026,14 +1139,21 @@
 			});
 
 			window.revealDeck = transposedDeck;
+			installGroupedHashModel();
 			installTransposedOverviewHooks();
 
-			if (isMobileDeck) {
+			if (!isDualMode) {
 				const revealElement = Reveal.getRevealElement();
-				revealElement.addEventListener('touchstart', handleMobileTouchStart, { passive: true });
-				revealElement.addEventListener('touchmove', handleMobileTouchMove, { passive: false });
-				revealElement.addEventListener('touchend', handleMobileTouchEnd, { passive: true });
-				revealElement.addEventListener('touchcancel', handleMobileTouchEnd, { passive: true });
+				if (isMobileDeck) {
+					revealElement.addEventListener('touchstart', handleMobileTouchStart, { passive: true });
+					revealElement.addEventListener('touchmove', handleMobileTouchMove, { passive: false });
+					revealElement.addEventListener('touchend', handleMobileTouchEnd, { passive: true });
+					revealElement.addEventListener('touchcancel', handleMobileTouchEnd, { passive: true });
+				}
+
+				window.addEventListener('hashchange', () => {
+					applyDeckHashForRuntime();
+				});
 			}
 
 			if (isDualMode) {
@@ -1063,6 +1183,21 @@
 					});
 				});
 
+			}
+			else {
+				Reveal.on('ready', () => {
+					const initialHash = parseDeckHashForRuntime();
+					if (initialHash) {
+						applyDeckHashForRuntime();
+					}
+					else {
+						replaceDeckHashForRuntime(getLogicalIndices());
+					}
+				});
+
+				Reveal.on('slidechanged', () => {
+					replaceDeckHashForRuntime(getLogicalIndices());
+				});
 			}
 
 			Reveal.on('ready', () => {

@@ -355,71 +355,80 @@
 					});
 				}
 
-			function parseDeckHash() {
-				const match = window.location.hash.match(/^#\/(\d+)$/);
+			function parseDeckHash(hash = window.location.hash) {
+				const match = hash.match(/^#\/(\d+)(?:\/(\d+))?(?:\/(\d+))?$/);
 				if (!match) {
+					dualDebug('parseDeckHash:no-match', { hash });
 					return null;
 				}
 
-				let flatIndex = Math.max(0, Number(match[1] || 1) - 1);
-				let groupIndex = 0;
+				const groupIndex = Math.min(
+					Math.max(0, Number(match[1] || 1) - 1),
+					Math.max(0, groupSizes.length - 1)
+				);
+				const slideIndex = Math.min(
+					Math.max(0, Number(match[2] || 1) - 1),
+					Math.max(0, (groupSizes[groupIndex] || 1) - 1)
+				);
 
-				while (groupIndex < groupSizes.length) {
-					const groupSize = groupSizes[groupIndex];
-					if (flatIndex < groupSize) {
-						return {
-							h: flatIndex,
-							v: groupIndex,
-							f: 0,
-						};
-					}
-
-					flatIndex -= groupSize;
-					groupIndex += 1;
-				}
-
-				const lastGroupIndex = Math.max(0, groupSizes.length - 1);
-				return {
-					h: Math.max(0, (groupSizes[lastGroupIndex] || 1) - 1),
-					v: lastGroupIndex,
-					f: 0,
+				const parsed = {
+					h: slideIndex,
+					v: groupIndex,
+					f: Math.max(0, Number(match[3] || 0)),
 				};
+				dualDebug('parseDeckHash:match', { hash, parsed });
+				return parsed;
 			}
 
 			function serializeDeckHash(indices) {
 				const h = Math.max(0, Number(indices?.h || 0));
 				const v = Math.max(0, Number(indices?.v || 0));
-				let flatIndex = h;
+				const f = Math.max(0, Number(indices?.f || 0));
+				let hash = `#/${v + 1}/${h + 1}`;
 
-				for (let groupIndex = 0; groupIndex < v; groupIndex += 1) {
-					flatIndex += groupSizes[groupIndex] || 0;
+				if (f > 0) {
+					hash += `/${f}`;
 				}
 
-				return `#/${flatIndex + 1}`;
+				return hash;
 			}
 
 			function replaceDeckHash(indices) {
 				if (hashState.applying) {
+					dualDebug('replaceDeckHash:skip-applying', { indices, hash: window.location.hash });
 					return;
 				}
 
 				const nextHash = serializeDeckHash(indices);
 				if (nextHash === hashState.lastSerialized && window.location.hash === nextHash) {
+					dualDebug('replaceDeckHash:skip-same', { indices, nextHash, currentHash: window.location.hash });
 					return;
 				}
 
 				hashState.lastSerialized = nextHash;
+				dualDebug('replaceDeckHash:apply', { indices, nextHash });
 				history.replaceState(null, '', `${window.location.pathname}${window.location.search}${nextHash}`);
 			}
 
 			function applyHashToDeck(deck, indices) {
 				if (!deck || !indices) {
+					dualDebug('applyHashToDeck:skip', { hasDeck: !!deck, indices });
 					return;
 				}
 
+				dualDebug('applyHashToDeck:apply', {
+					hash: window.location.hash,
+					indices,
+					deckIndicesBefore: typeof deck.getIndices === 'function' ? deck.getIndices() : null,
+				});
 				hashState.applying = true;
 				deck.slide(indices.h, indices.v, indices.f || 0);
 				requestAnimationFrame(() => {
+					dualDebug('applyHashToDeck:post-raf', {
+						hash: window.location.hash,
+						indices,
+						deckIndicesAfter: typeof deck.getIndices === 'function' ? deck.getIndices() : null,
+					});
 					hashState.applying = false;
 				});
 			}
@@ -461,7 +470,7 @@
 
 				if (isMobileDeck) {
 					normalFrame.classList.remove('deck_frame-pending');
-					normalFrame.src = '/directional?mode=mobile';
+					normalFrame.src = `/directional?mode=mobile${window.location.hash || ''}`;
 					dualDebug('assigned mobile iframe src', getParentDebugState());
 					logMobileShellMetrics('after-mobile-src-assigned');
 					void probeFrameSrc(normalFrame, 'mobile-assign');

@@ -39,6 +39,12 @@
 			.reveal {
 				width: 100%;
 				height: 100%;
+				opacity: 0;
+				transition: opacity 220ms ease;
+			}
+
+			body.deck-ready .reveal {
+				opacity: 1;
 			}
 
 			.reveal .slides {
@@ -202,6 +208,12 @@
 				center: true,
 				transition: 'fade',
 				transitionSpeed: 'fast',
+			});
+
+			Reveal.on('ready', () => {
+				requestAnimationFrame(() => {
+					document.body.classList.add('deck-ready');
+				});
 			});
 
 			Reveal.on('slidechanged', (event) => {

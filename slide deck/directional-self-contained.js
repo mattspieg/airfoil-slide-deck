@@ -207,7 +207,6 @@ class Ci {
     });
   }
   logMediaDebug(e, t = {}) {
-    console.log("[reveal media]", e, JSON.stringify(t));
   }
   /**
    * Should the given element be preloaded?
@@ -1325,7 +1324,10 @@ class Oi {
       this.activatedCallbacks.push(() => this.scrollToSlide(e));
     else {
       const t = this.getScrollTriggerBySlide(e);
-      t && (this.viewportElement.scrollTop = t.range[0] * (this.viewportElement.scrollHeight - this.viewportElement.offsetHeight));
+      const i = this.viewportElement.scrollHeight - this.viewportElement.offsetHeight;
+      const s = t ? (t.range[0] + t.range[1]) / 2 : null;
+      const a = t ? s * i : null;
+      t && (this.viewportElement.scrollTop = a);
     }
   }
   /**
@@ -3088,34 +3090,11 @@ function qt(h, e) {
       le && (P = w ? 6 : i.mobileViewDistance), V.isActive() && (P = Number.MAX_VALUE);
       for (let x = 0; x < d; x++) {
         let N = r[x], oe = E(N, "section"), G = oe.length;
-        if (v = Math.abs((n || 0) - x) || 0, i.loop && (v = Math.abs(((n || 0) - x) % (d - P)) || 0), console.log("[reveal media]", "Fe:group-decision", JSON.stringify({
-          groupIndex: x,
-          currentH: n || 0,
-          currentV: o || 0,
-          distance: v,
-          threshold: P,
-          action: v < P ? "load" : "unload",
-          hasDataSrcVideo: !!N.querySelector("video[data-src], video source[data-src]"),
-          hasSrcVideo: !!N.querySelector("video[src], video source[src]"),
-          deckGroup: N.getAttribute("data-deck-group") || null
-        })), v < P ? R.load(N) : R.unload(N), G) {
+        if (v = Math.abs((n || 0) - x) || 0, i.loop && (v = Math.abs(((n || 0) - x) % (d - P)) || 0), v < P ? R.load(N) : R.unload(N), G) {
           let $ = w ? 0 : ot(N);
           for (let I = 0; I < G; I++) {
             let ee = oe[I];
-            m = Math.abs(x === (n || 0) ? (o || 0) - I : I - $), console.log("[reveal media]", "Fe:slide-decision", JSON.stringify({
-              groupIndex: x,
-              slideIndex: I,
-              currentH: n || 0,
-              currentV: o || 0,
-              groupDistance: v,
-              slideDistance: m,
-              totalDistance: v + m,
-              threshold: P,
-              action: v + m < P ? "load" : "unload",
-              deckSlide: ee.getAttribute("data-deck-slide") || null,
-              hasDataSrcVideo: !!ee.querySelector("video[data-src], video source[data-src]") || ee.matches("video[data-src]"),
-              hasSrcVideo: !!ee.querySelector("video[src], video source[src]") || ee.matches("video[src]")
-            })), v + m < P ? R.load(ee) : R.unload(ee);
+            m = Math.abs(x === (n || 0) ? (o || 0) - I : I - $), v + m < P ? R.load(ee) : R.unload(ee);
           }
         }
       }
@@ -3802,7 +3781,13 @@ var zoom = (function(){
 			const mobileHashState = {
 				applying: false,
 				lastSerialized: null,
+				initializedFromHash: false,
+				ready: false,
 			};
+			const directionalDebugPrefix = '[directional-self-contained]';
+			function directionalDebug(message, detail) {
+				return;
+			}
 			const controlsRoot = () => document.querySelector('.deck_controls');
 			const helperTip = document.querySelector('.deck_helper-tip');
 			const helperIconColor = 'white';
@@ -3816,6 +3801,9 @@ var zoom = (function(){
 			// Plain /directional on touch devices should follow the same code path
 			// as the iframe-driven mobile view used by the dual shell.
 			const isMobileDeck = deckMode === 'mobile' || (!isDualMode && isTouchDevice);
+			if (isMobileDeck && 'scrollRestoration' in history) {
+				history.scrollRestoration = 'manual';
+			}
 			function isUsingRevealScrollView() {
 				return typeof Reveal?.isScrollView === 'function' && Reveal.isScrollView();
 			}
@@ -3899,8 +3887,140 @@ var zoom = (function(){
 				};
 			}
 
+			function findGroupElementByLogicalIndex(groupIndex) {
+				return getDeckGroups()[clampIndex(toNumber(groupIndex, 0), 0, groupSizes.length - 1)] || null;
+			}
+
+			function findSlideElementByLogicalIndices(indices = {}) {
+				const groupElement = findGroupElementByLogicalIndex(indices.v);
+				if (!groupElement) {
+					return null;
+				}
+
+				const slides = getDeckSlides(groupElement);
+				return slides[clampIndex(toNumber(indices.h, 0), 0, Math.max(0, slides.length - 1))] || null;
+			}
+
+			function resolvePhysicalIndices(indices = {}) {
+				const slideElement = findSlideElementByLogicalIndices(indices);
+				if (slideElement && typeof Reveal?.getIndices === 'function') {
+					const resolved = Reveal.getIndices(slideElement);
+					directionalDebug('resolvePhysicalIndices:from-slide', {
+						requested: indices,
+						slideDataId: slideElement.getAttribute('data-deck-slide'),
+						resolved,
+					});
+					return {
+						h: toNumber(resolved.h, 0),
+						v: toNumber(resolved.v, 0),
+						f: typeof indices.f === 'number' ? indices.f : toNumber(resolved.f ?? resolved.indexf, 0),
+					};
+				}
+
+				return toPhysicalIndices(indices);
+			}
+
+			function resolveLogicalIndicesFromSlide(slideElement) {
+				if (!slideElement) {
+					return null;
+				}
+
+				const slide = slideElement.classList?.contains('deck_slide') ? slideElement : slideElement.closest('.deck_slide');
+				const group = slide?.parentElement?.classList?.contains('deck_group') ? slide.parentElement : slide?.closest('.deck_group');
+				if (!slide || !group) {
+					return null;
+				}
+
+				const slides = getDeckSlides(group);
+				const slideIndex = slides.indexOf(slide);
+				const groupIndex = getDeckGroups().indexOf(group);
+				if (slideIndex < 0 || groupIndex < 0) {
+					return null;
+				}
+
+				const rawIndices = typeof Reveal?.getIndices === 'function' ? Reveal.getIndices(slide) : {};
+				return {
+					h: slideIndex,
+					v: groupIndex,
+					f: toNumber(rawIndices.f ?? rawIndices.indexf, 0),
+				};
+			}
+
+			function parseGroupedDeckHash(hash, fallbackParser) {
+				const match = hash?.match(/^#\/(\d+)(?:\/(\d+))?(?:\/(\d+))?$/);
+				if (!match) {
+					directionalDebug('parseGroupedDeckHash:no-match', { hash });
+					return typeof fallbackParser === 'function' ? fallbackParser(hash) : null;
+				}
+
+				const logicalIndices = {
+					h: Math.max(0, Number(match[2] || 1) - 1),
+					v: Math.max(0, Number(match[1] || 1) - 1),
+				};
+				const fragmentIndex = Number.parseInt(match[3] || '', 10);
+				if (Number.isFinite(fragmentIndex)) {
+					logicalIndices.f = fragmentIndex;
+				}
+
+				directionalDebug('parseGroupedDeckHash:match', { hash, logicalIndices });
+				return logicalIndices;
+			}
+
+			function serializeGroupedDeckHash(indices = {}) {
+				const logicalIndices = {
+					h: clampIndex(toNumber(indices.h, 0), 0, getGroupLength(indices.v) - 1),
+					v: clampIndex(toNumber(indices.v, 0), 0, groupSizes.length - 1),
+					f: indices.f,
+				};
+				let hash = `/${logicalIndices.v + 1}/${logicalIndices.h + 1}`;
+
+				if (typeof logicalIndices.f === 'number' && logicalIndices.f >= 0) {
+					hash += `/${logicalIndices.f}`;
+				}
+
+				return hash;
+			}
+
+			function installGroupedHashModel() {
+				const locationController = Reveal.location;
+				if (!locationController || locationController.__deckGroupedHashInstalled) {
+					return false;
+				}
+
+				const originalGetIndicesFromHash = locationController.getIndicesFromHash.bind(locationController);
+				const originalGetHash = locationController.getHash.bind(locationController);
+
+				locationController.getIndicesFromHash = (hash = window.location.hash, options = {}) => {
+					const groupedIndices = parseGroupedDeckHash(hash);
+					if (groupedIndices) {
+						return toPhysicalIndices(groupedIndices);
+					}
+
+					return originalGetIndicesFromHash(hash, options);
+				};
+
+				locationController.getHash = (slideElement) => {
+					const activeSlide = slideElement || Reveal.getCurrentSlide?.();
+					const slideId = activeSlide?.getAttribute?.('id');
+					if (slideId) {
+						return originalGetHash(slideElement);
+					}
+
+					const logicalIndices = getLogicalIndices(slideElement);
+					if (!Reveal.getConfig().fragmentInURL) {
+						delete logicalIndices.f;
+					}
+
+					return serializeGroupedDeckHash(logicalIndices);
+				};
+
+				locationController.__deckGroupedHashInstalled = true;
+				return true;
+			}
+
 			function getLogicalIndices(slideElement) {
-				return slideElement ? toLogicalIndices(Reveal.getIndices(slideElement)) : toLogicalIndices(Reveal.getIndices());
+				const resolvedFromDom = slideElement ? resolveLogicalIndicesFromSlide(slideElement) : resolveLogicalIndicesFromSlide(Reveal.getCurrentSlide?.());
+				return resolvedFromDom || (slideElement ? toLogicalIndices(Reveal.getIndices(slideElement)) : toLogicalIndices(Reveal.getIndices()));
 			}
 
 			function getLogicalAvailableRoutes() {
@@ -3924,86 +4044,141 @@ var zoom = (function(){
 					v: typeof v === 'number' ? v : current.v,
 					f: typeof f === 'number' ? f : current.f,
 				};
-				const nextPhysical = toPhysicalIndices(nextLogical);
+				const targetSlideElement = findSlideElementByLogicalIndices(nextLogical);
+				const nextPhysical = resolvePhysicalIndices(nextLogical);
+				directionalDebug('slideLogical', {
+					hash: window.location.hash,
+					current,
+					requested: { h, v, f },
+					nextLogical,
+					nextPhysical,
+					targetSlideDataId: targetSlideElement?.getAttribute('data-deck-slide') || null,
+					scrollMode: isUsingRevealScrollView(),
+				});
+
+				if (isUsingRevealScrollView() && targetSlideElement && Reveal.scroll?.scrollToSlide) {
+					directionalDebug('slideLogical:scrollToSlide', {
+						targetSlideDataId: targetSlideElement.getAttribute('data-deck-slide'),
+						targetIndices: nextLogical,
+					});
+					Reveal.scroll.scrollToSlide(targetSlideElement);
+					return;
+				}
 
 				Reveal.slide(nextPhysical.h, nextPhysical.v, nextPhysical.f);
 			}
 
 			function parseMobileDeckHash(hash = window.location.hash) {
-				const flatMatch = hash.match(/^#\/(\d+)$/);
-				if (flatMatch) {
-					let flatIndex = Math.max(0, Number(flatMatch[1] || 1) - 1);
-					let groupIndex = 0;
-
-					while (groupIndex < groupSizes.length) {
-						const groupSize = groupSizes[groupIndex] || 1;
-						if (flatIndex < groupSize) {
-							return {
-								h: flatIndex,
-								v: groupIndex,
-								f: 0,
-							};
-						}
-
-						flatIndex -= groupSize;
-						groupIndex += 1;
-					}
-
-					const lastGroupIndex = Math.max(0, groupSizes.length - 1);
-					return {
-						h: Math.max(0, (groupSizes[lastGroupIndex] || 1) - 1),
-						v: lastGroupIndex,
-						f: 0,
-					};
+				const groupedIndices = parseGroupedDeckHash(hash);
+				if (groupedIndices) {
+					directionalDebug('parseMobileDeckHash:grouped', { hash, groupedIndices });
+					return groupedIndices;
 				}
 
 				const parsedIndices = Reveal.location?.getIndicesFromHash?.(hash);
-				return parsedIndices ? toLogicalIndices(parsedIndices) : null;
+				const logicalIndices = parsedIndices ? toLogicalIndices(parsedIndices) : null;
+				directionalDebug('parseMobileDeckHash:fallback', {
+					hash,
+					parsedIndices,
+					logicalIndices,
+				});
+				return logicalIndices;
 			}
 
 			function serializeMobileDeckHash(indices = getLogicalIndices()) {
-				const safeIndices = {
-					h: clampIndex(toNumber(indices.h, 0), 0, getGroupLength(indices.v) - 1),
-					v: clampIndex(toNumber(indices.v, 0), 0, groupSizes.length - 1),
-				};
-				let flatIndex = safeIndices.h;
-
-				for (let groupIndex = 0; groupIndex < safeIndices.v; groupIndex += 1) {
-					flatIndex += groupSizes[groupIndex] || 0;
-				}
-
-				return `#/${flatIndex + 1}`;
+				return `#${serializeGroupedDeckHash(indices)}`;
 			}
 
 			function replaceMobileDeckHash(indices = getLogicalIndices()) {
 				if (!isMobileDeck || mobileHashState.applying) {
+					directionalDebug('replaceMobileDeckHash:skip', {
+						isMobileDeck,
+						applying: mobileHashState.applying,
+						indices,
+						hash: window.location.hash,
+					});
+					return;
+				}
+
+				if (!mobileHashState.ready) {
+					directionalDebug('replaceMobileDeckHash:skip-not-ready', {
+						indices,
+						hash: window.location.hash,
+					});
 					return;
 				}
 
 				const nextHash = serializeMobileDeckHash(indices);
 				if (nextHash === mobileHashState.lastSerialized && window.location.hash === nextHash) {
+					directionalDebug('replaceMobileDeckHash:skip-same', {
+						indices,
+						nextHash,
+						currentHash: window.location.hash,
+					});
 					return;
 				}
 
 				mobileHashState.lastSerialized = nextHash;
+				directionalDebug('replaceMobileDeckHash:apply', {
+					indices,
+					nextHash,
+				});
 				history.replaceState(null, '', `${window.location.pathname}${window.location.search}${nextHash}`);
 			}
 
 			function applyMobileDeckHash(hash = window.location.hash) {
 				if (!isMobileDeck) {
+					directionalDebug('applyMobileDeckHash:skip-non-mobile', { hash });
 					return;
 				}
 
 				const nextIndices = parseMobileDeckHash(hash);
 				if (!nextIndices) {
+					directionalDebug('applyMobileDeckHash:skip-no-indices', { hash });
 					return;
 				}
 
+				directionalDebug('applyMobileDeckHash:apply', {
+					hash,
+					nextIndices,
+					currentLogical: getLogicalIndices(),
+				});
+				window.scrollTo(0, 0);
+				document.documentElement.scrollTop = 0;
+				document.body.scrollTop = 0;
+				mobileHashState.initializedFromHash = true;
 				mobileHashState.applying = true;
 				slideLogical(nextIndices.h, nextIndices.v, nextIndices.f || 0);
 				requestAnimationFrame(() => {
+					directionalDebug('applyMobileDeckHash:post-raf', {
+						hash: window.location.hash,
+						currentLogical: getLogicalIndices(),
+					});
 					mobileHashState.applying = false;
 				});
+			}
+
+			function handleGroupedHashLinkClick(event) {
+				const link = event.target.closest('a[href^="#/"]');
+				if (!link) {
+					return;
+				}
+
+				const href = link.getAttribute('href');
+				const nextIndices = parseGroupedDeckHash(href);
+				directionalDebug('handleGroupedHashLinkClick', {
+					href,
+					nextIndices,
+					text: (link.textContent || '').trim().slice(0, 80),
+				});
+				if (!nextIndices) {
+					return;
+				}
+
+				event.preventDefault();
+				event.stopImmediatePropagation();
+				slideLogical(nextIndices.h, nextIndices.v, nextIndices.f || 0);
+				history.replaceState(null, '', `${window.location.pathname}${window.location.search}#${serializeGroupedDeckHash(nextIndices)}`);
 			}
 
 			function navigateLogical(direction) {
@@ -4228,10 +4403,6 @@ var zoom = (function(){
 					video.setAttribute('src', directSrc);
 					video.removeAttribute('data-src');
 					video.dataset.directionalLoaded = 'true';
-					console.log('[directional media]', 'ensureManagedVideoLoaded:video-src', JSON.stringify({
-						slideId: video.closest('[data-deck-slide]')?.getAttribute('data-deck-slide') || null,
-						src: directSrc,
-					}));
 					return;
 				}
 
@@ -4244,10 +4415,6 @@ var zoom = (function(){
 
 				if (sources > 0) {
 					video.dataset.directionalLoaded = 'true';
-					console.log('[directional media]', 'ensureManagedVideoLoaded:source-src', JSON.stringify({
-						slideId: video.closest('[data-deck-slide]')?.getAttribute('data-deck-slide') || null,
-						sources,
-					}));
 					video.load();
 				}
 			}
@@ -4263,20 +4430,6 @@ var zoom = (function(){
 						ensureManagedVideoLoaded(video);
 					}
 					const shouldPlay = shouldAllowPlayback && isVideoOnActiveSlide(video) && isVideoInViewport(video);
-					console.log('[directional media]', 'syncManagedSlideVideos', JSON.stringify({
-						slideId: video.closest('[data-deck-slide]')?.getAttribute('data-deck-slide') || null,
-						src: video.getAttribute('src'),
-						dataSrc: video.getAttribute('data-src'),
-						currentSrc: video.currentSrc || null,
-						paused: video.paused,
-						readyState: video.readyState,
-						logicalDistance,
-						shouldPreload,
-						shouldAllowPlayback,
-						shouldPlay,
-						onActiveSlide: isVideoOnActiveSlide(video),
-						inViewport: isVideoInViewport(video),
-					}));
 
 					if (shouldPlay) {
 						if (video.paused) {
@@ -4613,7 +4766,7 @@ var zoom = (function(){
 				plugins: [],
 			} : {
 				...revealCanvas,
-				hash: true,
+				hash: false,
 				controls: !isTouchDevice,
 				help: !isTouchDevice,
 				keyboard: keyboardBindings,
@@ -4663,19 +4816,30 @@ var zoom = (function(){
 			});
 
 			window.revealDeck = transposedDeck;
+			installGroupedHashModel();
+			if (!isDualMode && window.location.hash) {
+				Reveal.location?.readURL?.();
+			}
 			installTransposedOverviewHooks();
 			syncDirectionalRuntimeClasses();
 
-			if (isMobileDeck) {
+			if (!isDualMode) {
 				const revealElement = Reveal.getRevealElement();
-				revealElement.addEventListener('touchstart', handleMobileTouchStart, { passive: true });
-				revealElement.addEventListener('touchmove', handleMobileTouchMove, { passive: false });
-				revealElement.addEventListener('touchend', handleMobileTouchEnd, { passive: true });
-				revealElement.addEventListener('touchcancel', handleMobileTouchEnd, { passive: true });
+				if (isMobileDeck) {
+					revealElement.addEventListener('touchstart', handleMobileTouchStart, { passive: true });
+					revealElement.addEventListener('touchmove', handleMobileTouchMove, { passive: false });
+					revealElement.addEventListener('touchend', handleMobileTouchEnd, { passive: true });
+					revealElement.addEventListener('touchcancel', handleMobileTouchEnd, { passive: true });
+				}
 
 				window.addEventListener('hashchange', () => {
+					directionalDebug('window.hashchange', {
+						hash: window.location.hash,
+						currentLogical: getLogicalIndices(),
+					});
 					applyMobileDeckHash();
 				});
+				document.addEventListener('click', handleGroupedHashLinkClick, true);
 			}
 
 			if (isDualMode) {
@@ -4705,24 +4869,65 @@ var zoom = (function(){
 					});
 				});
 
-			} else if (isMobileDeck) {
+			} else {
 				Reveal.on('ready', () => {
+					mobileHashState.ready = true;
 					const initialHash = parseMobileDeckHash();
+					directionalDebug('Reveal.ready:runtime', {
+						hash: window.location.hash,
+						initialHash,
+						currentLogical: getLogicalIndices(),
+					});
 					if (initialHash) {
 						applyMobileDeckHash();
 					}
-					else {
+					else if (!window.parent || window.parent === window) {
 						replaceMobileDeckHash(getLogicalIndices());
+					}
+					else {
+						directionalDebug('Reveal.ready:runtime-waiting-for-parent-hash', {
+							hash: window.location.hash,
+							currentLogical: getLogicalIndices(),
+						});
 					}
 				});
 
 				Reveal.on('slidechanged', () => {
+					directionalDebug('Reveal.slidechanged:runtime', {
+						hash: window.location.hash,
+						currentLogical: getLogicalIndices(),
+						ready: mobileHashState.ready,
+					});
+					if (!mobileHashState.ready) {
+						directionalDebug('Reveal.slidechanged:runtime-skip-before-ready', {
+							hash: window.location.hash,
+							currentLogical: getLogicalIndices(),
+						});
+						return;
+					}
+					if (window.parent && window.parent !== window && !mobileHashState.initializedFromHash && !window.location.hash) {
+						directionalDebug('Reveal.slidechanged:runtime-skip-preinit-write', {
+							hash: window.location.hash,
+							currentLogical: getLogicalIndices(),
+						});
+						return;
+					}
 					replaceMobileDeckHash(getLogicalIndices());
 				});
-
 			}
 
 			Reveal.on('ready', () => {
+				requestAnimationFrame(() => {
+					deckRoot?.classList.add('deck-ready');
+				});
+				installGroupedHashModel();
+				directionalDebug('Reveal.ready', {
+					hash: window.location.hash,
+					currentLogical: getLogicalIndices(),
+					isMobileDeck,
+					isDualMode,
+					deckMode,
+				});
 				syncDirectionalRuntimeClasses();
 				updateHelperTip();
 				syncTransposedOverview();
@@ -4748,6 +4953,13 @@ var zoom = (function(){
 			Reveal.on('slidechanged', (event) => {
 				syncDirectionalRuntimeClasses();
 				const logicalIndices = getLogicalIndices();
+				directionalDebug('Reveal.slidechanged', {
+					hash: window.location.hash,
+					logicalIndices,
+					previousLogical: event.previousSlide ? getLogicalIndices(event.previousSlide) : null,
+					currentSlideDataId: event.currentSlide?.getAttribute?.('data-deck-slide') || null,
+					scrollTop: Reveal.getViewportElement?.()?.scrollTop ?? null,
+				});
 				if (!isOverviewActive()) {
 					logicalGroupProgress.set(logicalIndices.v, logicalIndices.h);
 				}

@@ -196,6 +196,9 @@ html.reveal-full-page{width:100%;height:100%;height:100vh;height:calc(var(--vh, 
 .print-pdf .reveal .slide-background{opacity:1!important;visibility:visible!important}
 .reveal .slide-background video{position:absolute;width:100%;height:100%;max-width:none;max-height:none;top:0;left:0;object-fit:cover}
 .reveal .slide-background[data-background-size=contain] video{object-fit:contain}
+.deck_view{opacity:0;transition:opacity .22s ease}
+.deck_view.deck-ready{opacity:1}
+.wf-design-mode .deck_view{opacity:1!important}
 .reveal[data-background-transition=none]>.backgrounds .slide-background:not([data-background-transition]),.reveal>.backgrounds .slide-background[data-background-transition=none]{transition:none}
 .reveal[data-background-transition=slide]>.backgrounds .slide-background:not([data-background-transition]),.reveal>.backgrounds .slide-background[data-background-transition=slide]{opacity:1}
 .reveal[data-background-transition=slide]>.backgrounds .slide-background.past:not([data-background-transition]),.reveal>.backgrounds .slide-background.past[data-background-transition=slide]{transform:translate(-100%)}
