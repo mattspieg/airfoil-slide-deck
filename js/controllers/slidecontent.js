@@ -51,11 +51,6 @@ export default class SlideContent {
 	}
 
 	logMediaDebug( action, payload = {} ) {
-
-		if( typeof window === 'undefined' || window.__REVEAL_MEDIA_DEBUG__ !== true ) {
-			return;
-		}
-
 		console.log( '[reveal media]', action, payload );
 
 	}

@@ -207,7 +207,7 @@ class Ci {
     });
   }
   logMediaDebug(e, t = {}) {
-    typeof window != "undefined" && window.__REVEAL_MEDIA_DEBUG__ === !0 && console.log("[reveal media]", e, t);
+    console.log("[reveal media]", e, t);
   }
   /**
    * Should the given element be preloaded?
@@ -4102,20 +4102,18 @@ var zoom = (function(){
 
 				getManagedSlideVideos().forEach((video) => {
 					const shouldPlay = shouldAllowPlayback && isVideoOnActiveSlide(video) && isVideoInViewport(video);
-					if (window.__REVEAL_MEDIA_DEBUG__ === true) {
-						console.log('[directional media]', 'syncManagedSlideVideos', {
-							slideId: video.closest('[data-deck-slide]')?.getAttribute('data-deck-slide') || null,
-							src: video.getAttribute('src'),
-							dataSrc: video.getAttribute('data-src'),
-							currentSrc: video.currentSrc || null,
-							paused: video.paused,
-							readyState: video.readyState,
-							shouldAllowPlayback,
-							shouldPlay,
-							onActiveSlide: isVideoOnActiveSlide(video),
-							inViewport: isVideoInViewport(video),
-						});
-					}
+					console.log('[directional media]', 'syncManagedSlideVideos', {
+						slideId: video.closest('[data-deck-slide]')?.getAttribute('data-deck-slide') || null,
+						src: video.getAttribute('src'),
+						dataSrc: video.getAttribute('data-src'),
+						currentSrc: video.currentSrc || null,
+						paused: video.paused,
+						readyState: video.readyState,
+						shouldAllowPlayback,
+						shouldPlay,
+						onActiveSlide: isVideoOnActiveSlide(video),
+						inViewport: isVideoInViewport(video),
+					});
 
 					if (shouldPlay) {
 						if (video.paused) {
