@@ -4348,6 +4348,39 @@ var zoom = (function(){
 				).filter((video) => !video.closest('.slide-background'));
 			}
 
+			function getManagedVideoViewportMetrics(video) {
+				if (!video) {
+					return {
+						ratio: 0,
+						viewportWidth: 0,
+						viewportHeight: 0,
+					};
+				}
+
+				const rect = video.getBoundingClientRect();
+				const viewportWidth = window.visualViewport?.width || window.innerWidth || document.documentElement.clientWidth || 0;
+				const viewportHeight = window.visualViewport?.height || window.innerHeight || document.documentElement.clientHeight || 0;
+
+				if (rect.width <= 0 || rect.height <= 0 || viewportWidth <= 0 || viewportHeight <= 0) {
+					return {
+						ratio: 0,
+						viewportWidth,
+						viewportHeight,
+					};
+				}
+
+				const visibleWidth = Math.max(0, Math.min(rect.right, viewportWidth) - Math.max(rect.left, 0));
+				const visibleHeight = Math.max(0, Math.min(rect.bottom, viewportHeight) - Math.max(rect.top, 0));
+				const visibleArea = visibleWidth * visibleHeight;
+				const totalArea = rect.width * rect.height;
+
+				return {
+					ratio: totalArea > 0 ? visibleArea / totalArea : 0,
+					viewportWidth,
+					viewportHeight,
+				};
+			}
+
 			function isVideoOnActiveSlide(video) {
 				if (!video || isOverviewActive()) {
 					return false;
@@ -4362,20 +4395,7 @@ var zoom = (function(){
 					return false;
 				}
 
-				const rect = video.getBoundingClientRect();
-				const viewportWidth = window.visualViewport?.width || window.innerWidth || document.documentElement.clientWidth || 0;
-				const viewportHeight = window.visualViewport?.height || window.innerHeight || document.documentElement.clientHeight || 0;
-
-				if (rect.width <= 0 || rect.height <= 0 || viewportWidth <= 0 || viewportHeight <= 0) {
-					return false;
-				}
-
-				const visibleWidth = Math.max(0, Math.min(rect.right, viewportWidth) - Math.max(rect.left, 0));
-				const visibleHeight = Math.max(0, Math.min(rect.bottom, viewportHeight) - Math.max(rect.top, 0));
-				const visibleArea = visibleWidth * visibleHeight;
-				const totalArea = rect.width * rect.height;
-
-				return totalArea > 0 && visibleArea / totalArea >= 0.6;
+				return getManagedVideoViewportMetrics(video).ratio >= 0.6;
 			}
 
 			function getVideoLogicalDistance(video) {
@@ -4429,7 +4449,9 @@ var zoom = (function(){
 					if (shouldPreload) {
 						ensureManagedVideoLoaded(video);
 					}
-					const shouldPlay = shouldAllowPlayback && isVideoOnActiveSlide(video) && isVideoInViewport(video);
+					const onActiveSlide = isVideoOnActiveSlide(video);
+					const inViewport = isVideoInViewport(video);
+					const shouldPlay = shouldAllowPlayback && onActiveSlide && (isMobileDeck || inViewport);
 
 					if (shouldPlay) {
 						if (video.paused) {
