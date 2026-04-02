@@ -295,8 +295,11 @@ export default class SlideContent {
 			} );
 		}
 
-		// Reset lazy-loaded media elements with src attributes
-		queryAll( slide, 'video[data-lazy-loaded][src], audio[data-lazy-loaded][src], iframe[data-lazy-loaded][src]' ).forEach( element => {
+		// Reset lazy-loaded iframe elements with src attributes.
+		// We intentionally keep video/audio src values once loaded so
+		// media can preload in the view distance without being re-fetched
+		// every time a nearby slide is mounted/unmounted.
+		queryAll( slide, 'iframe[data-lazy-loaded][src]' ).forEach( element => {
 			this.logMediaDebug( 'unload:src->data-src', {
 				tagName: element.tagName,
 				slideId: slide.getAttribute( 'data-deck-slide' ) || slide.id || null,
@@ -308,8 +311,9 @@ export default class SlideContent {
 			element.removeAttribute( 'src' );
 		} );
 
-		// Reset lazy-loaded media elements with <source> children
-		queryAll( slide, 'video[data-lazy-loaded] source[src], audio source[src]' ).forEach( source => {
+		// Reset lazy-loaded audio source elements but keep video sources
+		// for the same reason as above.
+		queryAll( slide, 'audio[data-lazy-loaded] source[src]' ).forEach( source => {
 			this.logMediaDebug( 'unload:source-src->data-src', {
 				tagName: source.parentElement?.tagName || source.tagName,
 				slideId: slide.getAttribute( 'data-deck-slide' ) || slide.id || null,

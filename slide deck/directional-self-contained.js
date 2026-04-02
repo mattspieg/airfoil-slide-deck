@@ -298,9 +298,9 @@ class Ci {
     let t = this.Reveal.getSlideBackground(e);
     t && (t.style.display = "none", E(t, "iframe[src]").forEach((i) => {
       i.removeAttribute("src");
-    })), E(e, "video[data-lazy-loaded][src], audio[data-lazy-loaded][src], iframe[data-lazy-loaded][src]").forEach((i) => {
+    })), E(e, "iframe[data-lazy-loaded][src]").forEach((i) => {
       this.logMediaDebug("unload:src->data-src", { tagName: i.tagName, slideId: e.getAttribute("data-deck-slide") || e.id || null, src: i.getAttribute("src"), currentSrc: i.currentSrc || null, paused: typeof i.paused == "boolean" ? i.paused : null }), i.setAttribute("data-src", i.getAttribute("src")), i.removeAttribute("src");
-    }), E(e, "video[data-lazy-loaded] source[src], audio source[src]").forEach((i) => {
+    }), E(e, "audio[data-lazy-loaded] source[src]").forEach((i) => {
       this.logMediaDebug("unload:source-src->data-src", { tagName: (i.parentElement == null ? void 0 : i.parentElement.tagName) || i.tagName, slideId: e.getAttribute("data-deck-slide") || e.id || null, src: i.getAttribute("src") }), i.setAttribute("data-src", i.getAttribute("src")), i.removeAttribute("src");
     });
   }
