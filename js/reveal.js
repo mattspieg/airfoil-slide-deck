@@ -1865,6 +1865,16 @@ export default function( revealElement, options ) {
 				}
 
 				// Show the horizontal slide if it's within the view distance
+				console.log( '[reveal media]', 'updateSlidesVisibility:group-decision', {
+					groupIndex: x,
+					currentH: indexh || 0,
+					currentV: indexv || 0,
+					distance: distanceX,
+					threshold: viewDistance,
+					action: distanceX < viewDistance ? 'load' : 'unload',
+					hasDataSrcVideo: !!horizontalSlide.querySelector( 'video[data-src], video source[data-src]' ),
+					hasSrcVideo: !!horizontalSlide.querySelector( 'video[src], video source[src]' ),
+				} );
 				if( distanceX < viewDistance ) {
 					slideContent.load( horizontalSlide );
 				}
@@ -1881,6 +1891,20 @@ export default function( revealElement, options ) {
 
 						distanceY = x === ( indexh || 0 ) ? Math.abs( ( indexv || 0 ) - y ) : Math.abs( y - oy );
 
+						console.log( '[reveal media]', 'updateSlidesVisibility:slide-decision', {
+							groupIndex: x,
+							slideIndex: y,
+							currentH: indexh || 0,
+							currentV: indexv || 0,
+							groupDistance: distanceX,
+							slideDistance: distanceY,
+							totalDistance: distanceX + distanceY,
+							threshold: viewDistance,
+							action: distanceX + distanceY < viewDistance ? 'load' : 'unload',
+							deckSlide: verticalSlide.getAttribute( 'data-deck-slide' ) || null,
+							hasDataSrcVideo: !!verticalSlide.querySelector( 'video[data-src], video source[data-src]' ),
+							hasSrcVideo: !!verticalSlide.querySelector( 'video[src], video source[src]' ),
+						} );
 						if( distanceX + distanceY < viewDistance ) {
 							slideContent.load( verticalSlide );
 						}

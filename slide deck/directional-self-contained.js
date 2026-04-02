@@ -207,7 +207,7 @@ class Ci {
     });
   }
   logMediaDebug(e, t = {}) {
-    console.log("[reveal media]", e, t);
+    console.log("[reveal media]", e, JSON.stringify(t));
   }
   /**
    * Should the given element be preloaded?
@@ -3086,11 +3086,34 @@ function qt(h, e) {
       le && (P = w ? 6 : i.mobileViewDistance), V.isActive() && (P = Number.MAX_VALUE);
       for (let x = 0; x < d; x++) {
         let N = r[x], oe = E(N, "section"), G = oe.length;
-        if (v = Math.abs((n || 0) - x) || 0, i.loop && (v = Math.abs(((n || 0) - x) % (d - P)) || 0), v < P ? R.load(N) : R.unload(N), G) {
+        if (v = Math.abs((n || 0) - x) || 0, i.loop && (v = Math.abs(((n || 0) - x) % (d - P)) || 0), console.log("[reveal media]", "Fe:group-decision", JSON.stringify({
+          groupIndex: x,
+          currentH: n || 0,
+          currentV: o || 0,
+          distance: v,
+          threshold: P,
+          action: v < P ? "load" : "unload",
+          hasDataSrcVideo: !!N.querySelector("video[data-src], video source[data-src]"),
+          hasSrcVideo: !!N.querySelector("video[src], video source[src]"),
+          deckGroup: N.getAttribute("data-deck-group") || null
+        })), v < P ? R.load(N) : R.unload(N), G) {
           let $ = w ? 0 : ot(N);
           for (let I = 0; I < G; I++) {
             let ee = oe[I];
-            m = Math.abs(x === (n || 0) ? (o || 0) - I : I - $), v + m < P ? R.load(ee) : R.unload(ee);
+            m = Math.abs(x === (n || 0) ? (o || 0) - I : I - $), console.log("[reveal media]", "Fe:slide-decision", JSON.stringify({
+              groupIndex: x,
+              slideIndex: I,
+              currentH: n || 0,
+              currentV: o || 0,
+              groupDistance: v,
+              slideDistance: m,
+              totalDistance: v + m,
+              threshold: P,
+              action: v + m < P ? "load" : "unload",
+              deckSlide: ee.getAttribute("data-deck-slide") || null,
+              hasDataSrcVideo: !!ee.querySelector("video[data-src], video source[data-src]") || ee.matches("video[data-src]"),
+              hasSrcVideo: !!ee.querySelector("video[src], video source[src]") || ee.matches("video[src]")
+            })), v + m < P ? R.load(ee) : R.unload(ee);
           }
         }
       }
@@ -4102,7 +4125,7 @@ var zoom = (function(){
 
 				getManagedSlideVideos().forEach((video) => {
 					const shouldPlay = shouldAllowPlayback && isVideoOnActiveSlide(video) && isVideoInViewport(video);
-					console.log('[directional media]', 'syncManagedSlideVideos', {
+					console.log('[directional media]', 'syncManagedSlideVideos', JSON.stringify({
 						slideId: video.closest('[data-deck-slide]')?.getAttribute('data-deck-slide') || null,
 						src: video.getAttribute('src'),
 						dataSrc: video.getAttribute('data-src'),
@@ -4113,7 +4136,7 @@ var zoom = (function(){
 						shouldPlay,
 						onActiveSlide: isVideoOnActiveSlide(video),
 						inViewport: isVideoInViewport(video),
-					});
+					}));
 
 					if (shouldPlay) {
 						if (video.paused) {
