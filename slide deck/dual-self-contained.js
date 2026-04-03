@@ -23,6 +23,16 @@
 				lastSerialized: null,
 				mobileBound: false,
 			};
+			function getMobileFrameSrc() {
+				const baseSrc =
+					normalFrame.getAttribute('src') ||
+					normalFrame.dataset.src ||
+					window.location.href;
+				const nextUrl = new URL(baseSrc, window.location.href);
+				nextUrl.searchParams.set('mode', 'mobile');
+				nextUrl.hash = window.location.hash || '';
+				return `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`;
+			}
 				const slideCount = 62;
 				const groupStarts = [1, 2, 8, 14, 19, 24, 29, 34, 39, 44, 49, 54, 58];
 				const groupSizes = groupStarts.map((start, index) => {
@@ -500,7 +510,7 @@
 
 				if (isMobileDeck) {
 					normalFrame.classList.remove('deck_frame-pending');
-					normalFrame.src = `/directional?mode=mobile${window.location.hash || ''}`;
+					normalFrame.src = getMobileFrameSrc();
 					dualDebug('assigned mobile iframe src', getParentDebugState());
 					logMobileShellMetrics('after-mobile-src-assigned');
 					void probeFrameSrc(normalFrame, 'mobile-assign');
