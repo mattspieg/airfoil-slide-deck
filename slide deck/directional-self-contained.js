@@ -3784,13 +3784,58 @@ var zoom = (function(){
 				initializedFromHash: false,
 				ready: false,
 			};
+			const groupedHashNavState = {
+				pendingHash: null,
+				pointerLink: null,
+				releaseTimer: null,
+			};
 			const directionalDebugPrefix = '[directional-self-contained]';
+			function formatDirectionalDebugDetail(detail) {
+				const directionalDebugSeenObjects = new WeakSet();
+
+				try {
+					return JSON.stringify(detail, (key, value) => {
+						if (value === Infinity) {
+							return 'Infinity';
+						}
+
+						if (value === -Infinity) {
+							return '-Infinity';
+						}
+
+						if (typeof value === 'number' && Number.isNaN(value)) {
+							return 'NaN';
+						}
+
+						if (value instanceof Error) {
+							return {
+								name: value.name,
+								message: value.message,
+								stack: value.stack,
+							};
+						}
+
+						if (value && typeof value === 'object') {
+							if (directionalDebugSeenObjects.has(value)) {
+								return '[Circular]';
+							}
+
+							directionalDebugSeenObjects.add(value);
+						}
+
+						return value;
+					});
+				}
+				catch (error) {
+					return JSON.stringify({
+						stringifyError: String(error),
+					});
+				}
+			}
 			function directionalDebug(message, detail) {
 				return;
 			}
 			const controlsRoot = () => document.querySelector('.deck_controls');
-			const helperTip = document.querySelector('.deck_helper-tip');
-			const helperIconColor = 'white';
 			const isTouchDevice =
 				navigator.maxTouchPoints > 0 ||
 				'ontouchstart' in window ||
@@ -3819,33 +3864,6 @@ var zoom = (function(){
 					(keyCode === 191 && !event.shiftKey)
 				);
 			};
-
-			if ((isDualMode || isMobileDeck) && helperTip) {
-				helperTip.classList.add('deck_helper-tip-hidden');
-			}
-
-			const downTipIcon = `
-				<span class="deck_helper-tip-icon" aria-hidden="true">
-					<svg class="deck_helper-tip-icon-svg" width="200" height="208" viewBox="0 0 200 208" fill="none" xmlns="http://www.w3.org/2000/svg">
-						<mask id="path-1-outside-1_79_71" maskUnits="userSpaceOnUse" x="0" y="0" width="200" height="208" fill="black">
-							<rect fill="white" width="200" height="208"/>
-							<path d="M10 38C10 22.536 22.536 10 38 10H162C177.464 10 190 22.536 190 38V152C190 167.464 177.464 180 162 180H38C22.536 180 10 167.464 10 152V38Z"/>
-						</mask>
-						<path d="M0 38C0 17.0132 17.0132 0 38 0H162C182.987 0 200 17.0132 200 38H180C180 28.0589 171.941 20 162 20H38C28.0589 20 20 28.0589 20 38H0ZM200 170C200 190.987 182.987 208 162 208H38C17.0132 208 0 190.987 0 170L20 152C20 152 28.0589 152 38 152H162C171.941 152 180 152 180 152L200 170ZM38 208C17.0132 208 0 190.987 0 170V38C0 17.0132 17.0132 0 38 0V20C28.0589 20 20 28.0589 20 38V152C20 152 28.0589 152 38 152V208ZM162 0C182.987 0 200 17.0132 200 38V170C200 190.987 182.987 208 162 208V152C171.941 152 180 152 180 152V38C180 28.0589 171.941 20 162 20V0Z" fill="${helperIconColor}" fill-opacity="0.5" mask="url(#path-1-outside-1_79_71)"/>
-						<path d="M100.389 129.774C100.017 130.497 98.9834 130.497 98.6111 129.774L74.7511 83.4579C74.4083 82.7924 74.8914 81.9999 75.6401 81.9999L123.36 81.9999C124.109 81.9999 124.592 82.7924 124.249 83.4579L100.389 129.774Z" fill="${helperIconColor}" fill-opacity="0.5"/>
-					</svg>
-				</span>`;
-			const escTipIcon = `
-				<span class="deck_helper-tip-icon" aria-hidden="true">
-					<svg class="deck_helper-tip-icon-svg" width="200" height="208" viewBox="0 0 200 208" fill="none" xmlns="http://www.w3.org/2000/svg">
-						<mask id="path-1-outside-1_79_71" maskUnits="userSpaceOnUse" x="0" y="0" width="200" height="208" fill="black">
-							<rect fill="white" width="200" height="208"/>
-							<path d="M10 38C10 22.536 22.536 10 38 10H162C177.464 10 190 22.536 190 38V152C190 167.464 177.464 180 162 180H38C22.536 180 10 167.464 10 152V38Z"/>
-						</mask>
-						<path d="M0 38C0 17.0132 17.0132 0 38 0H162C182.987 0 200 17.0132 200 38H180C180 28.0589 171.941 20 162 20H38C28.0589 20 20 28.0589 20 38H0ZM200 170C200 190.987 182.987 208 162 208H38C17.0132 208 0 190.987 0 170L20 152C20 152 28.0589 152 38 152H162C171.941 152 180 152 180 152L200 170ZM38 208C17.0132 208 0 190.987 0 170V38C0 17.0132 17.0132 0 38 0V20C28.0589 20 20 28.0589 20 38V152C20 152 28.0589 152 38 152V208ZM162 0C182.987 0 200 17.0132 200 38V170C200 190.987 182.987 208 162 208V152C171.941 152 180 152 180 152V38C180 28.0589 171.941 20 162 20V0Z" fill="${helperIconColor}" fill-opacity="0.5" mask="url(#path-1-outside-1_79_71)"/>
-						<path d="M52.6194 121.938C47.6819 121.938 43.4319 120.938 39.8694 118.938C36.3277 116.917 33.5985 114.062 31.6819 110.375C29.7652 106.667 28.8069 102.281 28.8069 97.2187C28.8069 92.2812 29.7652 87.9479 31.6819 84.2188C33.5985 80.4896 36.2965 77.5833 39.7756 75.5C43.2756 73.4167 47.3798 72.375 52.0881 72.375C55.2548 72.375 58.2027 72.8854 60.9319 73.9062C63.6819 74.9062 66.0777 76.4167 68.1194 78.4375C70.1819 80.4583 71.786 83 72.9319 86.0625C74.0777 89.1042 74.6506 92.6667 74.6506 96.75V100.406H34.1194V92.1562H62.1194C62.1194 90.2396 61.7027 88.5417 60.8694 87.0625C60.036 85.5833 58.8798 84.4271 57.4006 83.5937C55.9423 82.7396 54.2444 82.3125 52.3069 82.3125C50.286 82.3125 48.4944 82.7812 46.9319 83.7187C45.3902 84.6354 44.1819 85.875 43.3069 87.4375C42.4319 88.9792 41.984 90.6979 41.9631 92.5937V100.437C41.9631 102.812 42.4006 104.865 43.2756 106.594C44.1715 108.323 45.4319 109.656 47.0569 110.594C48.6819 111.531 50.609 112 52.8381 112C54.3173 112 55.6715 111.792 56.9006 111.375C58.1298 110.958 59.1819 110.333 60.0569 109.5C60.9319 108.667 61.5985 107.646 62.0569 106.438L74.3694 107.25C73.7444 110.208 72.4631 112.792 70.5256 115C68.609 117.187 66.1298 118.896 63.0881 120.125C60.0673 121.333 56.5777 121.938 52.6194 121.938ZM121.516 86.6875L109.328 87.4375C109.12 86.3958 108.672 85.4583 107.984 84.625C107.297 83.7708 106.391 83.0937 105.266 82.5937C104.161 82.0729 102.839 81.8125 101.297 81.8125C99.2344 81.8125 97.4948 82.25 96.0781 83.125C94.6615 83.9792 93.9531 85.125 93.9531 86.5625C93.9531 87.7083 94.4115 88.6771 95.3281 89.4688C96.2448 90.2604 97.8177 90.8958 100.047 91.375L108.734 93.125C113.401 94.0833 116.88 95.625 119.172 97.75C121.464 99.875 122.609 102.667 122.609 106.125C122.609 109.271 121.682 112.031 119.828 114.406C117.995 116.781 115.474 118.635 112.266 119.969C109.078 121.281 105.401 121.938 101.234 121.938C94.8802 121.938 89.8177 120.615 86.0469 117.969C82.2969 115.302 80.099 111.677 79.4531 107.094L92.5469 106.406C92.9427 108.344 93.901 109.823 95.4219 110.844C96.9427 111.844 98.8906 112.344 101.266 112.344C103.599 112.344 105.474 111.896 106.891 111C108.328 110.083 109.057 108.906 109.078 107.469C109.057 106.26 108.547 105.271 107.547 104.5C106.547 103.708 105.005 103.104 102.922 102.687L94.6094 101.031C89.9219 100.094 86.4323 98.4687 84.1406 96.1562C81.8698 93.8437 80.7344 90.8958 80.7344 87.3125C80.7344 84.2292 81.5677 81.5729 83.2344 79.3437C84.9219 77.1146 87.2865 75.3958 90.3281 74.1875C93.3906 72.9792 96.974 72.375 101.078 72.375C107.141 72.375 111.911 73.6562 115.391 76.2187C118.891 78.7812 120.932 82.2708 121.516 86.6875ZM150.92 121.938C146.003 121.938 141.774 120.896 138.232 118.812C134.711 116.708 132.003 113.792 130.107 110.062C128.232 106.333 127.295 102.042 127.295 97.1875C127.295 92.2708 128.243 87.9583 130.138 84.25C132.055 80.5208 134.774 77.6146 138.295 75.5312C141.816 73.4271 146.003 72.375 150.857 72.375C155.045 72.375 158.711 73.1354 161.857 74.6562C165.003 76.1771 167.493 78.3125 169.326 81.0625C171.159 83.8125 172.17 87.0417 172.357 90.75H159.795C159.441 88.3542 158.503 86.4271 156.982 84.9687C155.482 83.4896 153.513 82.75 151.076 82.75C149.013 82.75 147.211 83.3125 145.67 84.4375C144.149 85.5417 142.961 87.1562 142.107 89.2812C141.253 91.4062 140.826 93.9792 140.826 97C140.826 100.062 141.243 102.667 142.076 104.812C142.93 106.958 144.128 108.594 145.67 109.719C147.211 110.844 149.013 111.406 151.076 111.406C152.597 111.406 153.961 111.094 155.17 110.469C156.399 109.844 157.409 108.937 158.201 107.75C159.013 106.542 159.545 105.094 159.795 103.406H172.357C172.149 107.073 171.149 110.302 169.357 113.094C167.586 115.865 165.138 118.031 162.013 119.594C158.888 121.156 155.191 121.938 150.92 121.938Z" fill="${helperIconColor}" fill-opacity="0.5"/>
-					</svg>
-				</span>`;
 
 			function toNumber(value, fallback = 0) {
 				const parsed = Number(value);
@@ -4158,27 +4176,109 @@ var zoom = (function(){
 				});
 			}
 
-			function handleGroupedHashLinkClick(event) {
+			function normalizeGroupedHash(hash) {
+				const nextIndices = parseGroupedDeckHash(hash);
+				return nextIndices ? `#${serializeGroupedDeckHash(nextIndices)}` : null;
+			}
+
+			function navigateGroupedHash(hash) {
+				const normalizedHash = normalizeGroupedHash(hash);
+				if (!normalizedHash || groupedHashNavState.pendingHash === normalizedHash) {
+					return;
+				}
+
+				const nextIndices = parseGroupedDeckHash(normalizedHash);
+				if (!nextIndices) {
+					return;
+				}
+
+				groupedHashNavState.pendingHash = normalizedHash;
+				slideLogical(nextIndices.h, nextIndices.v, nextIndices.f || 0);
+				history.replaceState(null, '', `${window.location.pathname}${window.location.search}${normalizedHash}`);
+				requestAnimationFrame(() => {
+					if (groupedHashNavState.pendingHash === normalizedHash) {
+						groupedHashNavState.pendingHash = null;
+					}
+				});
+			}
+
+			function isDropdownCurrentlyOpen(dropdown) {
+				if (!dropdown) {
+					return false;
+				}
+
+				return dropdown.classList.contains('w--open') ||
+					dropdown.getAttribute('aria-expanded') === 'true' ||
+					!!dropdown.querySelector('.w--open');
+			}
+
+			function scheduleGroupedNavigation(link, hash) {
+				const dropdown = link.closest('.deck_dropdown');
+				if (!isDropdownCurrentlyOpen(dropdown)) {
+					navigateGroupedHash(hash);
+					return;
+				}
+
+				let finished = false;
+				const complete = () => {
+					if (finished) {
+						return;
+					}
+
+					finished = true;
+					dropdown?.removeEventListener('transitionend', onTransitionEnd, true);
+					navigateGroupedHash(hash);
+				};
+				const onTransitionEnd = (transitionEvent) => {
+					if (!dropdown?.contains(transitionEvent.target)) {
+						return;
+					}
+
+					complete();
+				};
+
+				dropdown.addEventListener('transitionend', onTransitionEnd, true);
+				if (window.jQuery) {
+					window.jQuery(dropdown).trigger('w-close');
+				}
+				else {
+					dropdown.classList.remove('w--open');
+					dropdown.setAttribute('aria-expanded', 'false');
+				}
+
+				window.setTimeout(complete, 300);
+			}
+
+			function handleGroupedHashLinkActivation(event) {
 				const link = event.target.closest('a[href^="#/"]');
 				if (!link) {
 					return;
 				}
 
 				const href = link.getAttribute('href');
-				const nextIndices = parseGroupedDeckHash(href);
-				directionalDebug('handleGroupedHashLinkClick', {
-					href,
-					nextIndices,
-					text: (link.textContent || '').trim().slice(0, 80),
-				});
-				if (!nextIndices) {
+				if (!normalizeGroupedHash(href)) {
+					return;
+				}
+
+				if (event.type === 'click' && groupedHashNavState.pointerLink === link) {
+					groupedHashNavState.pointerLink = null;
 					return;
 				}
 
 				event.preventDefault();
 				event.stopImmediatePropagation();
-				slideLogical(nextIndices.h, nextIndices.v, nextIndices.f || 0);
-				history.replaceState(null, '', `${window.location.pathname}${window.location.search}#${serializeGroupedDeckHash(nextIndices)}`);
+
+				if (event.type === 'pointerdown') {
+					groupedHashNavState.pointerLink = link;
+					window.clearTimeout(groupedHashNavState.releaseTimer);
+					groupedHashNavState.releaseTimer = window.setTimeout(() => {
+						if (groupedHashNavState.pointerLink === link) {
+							groupedHashNavState.pointerLink = null;
+						}
+					}, 500);
+				}
+
+				scheduleGroupedNavigation(link, href);
 			}
 
 			function navigateLogical(direction) {
@@ -4299,6 +4399,7 @@ var zoom = (function(){
 				const slidesElement = Reveal.getSlidesElement?.() || slidesRoot;
 				const backgroundsElement = Reveal.getBackgroundsElement?.() || revealElement?.querySelector('.backgrounds');
 				const controlsElement = revealElement?.querySelector('.controls');
+				const deckDropdowns = Array.from(document.querySelectorAll('.deck_dropdown'));
 				const isOverview = revealElement?.classList.contains('overview');
 				const isOverviewActivating = revealElement?.classList.contains('overview-activating');
 				const stackGroups = Array.from(slidesElement?.children || []).filter((element) => element.tagName === 'SECTION');
@@ -4338,6 +4439,10 @@ var zoom = (function(){
 				controlDirections.forEach((direction) => {
 					const control = controlsElement?.querySelector(`.navigate-${direction}`);
 					control?.classList.add('deck_control', `deck_control-${direction}`);
+				});
+
+				deckDropdowns.forEach((dropdown) => {
+					dropdown.style.display = isOverviewDeck ? 'none' : '';
 				});
 			}
 
@@ -4552,34 +4657,6 @@ var zoom = (function(){
 				control.classList.remove('deck_control-bump');
 				void control.offsetWidth;
 				control.classList.add('deck_control-bump');
-			}
-
-			function updateHelperTip() {
-				if (!helperTip || isDualMode || isMobileDeck) {
-					if (helperTip) {
-						helperTip.classList.add('deck_helper-tip-hidden');
-						helperTip.innerHTML = '';
-					}
-					return;
-				}
-
-				const indices = getLogicalIndices();
-				const isOverviewMode = Reveal.getRevealElement().classList.contains('overview');
-				const isTopLevelSlide = indices.h === 0;
-				const isFirstSlide = indices.h === 0 && indices.v === 0;
-
-				if (!isOverviewMode && isFirstSlide) {
-					helperTip.classList.add('deck_helper-tip-hidden');
-					helperTip.innerHTML = '';
-					return;
-				}
-
-				helperTip.classList.remove('deck_helper-tip-hidden');
-				helperTip.innerHTML = isOverviewMode
-					? `Press ${escTipIcon} to exit overview mode.`
-					: isTopLevelSlide
-						? 'Press Right to see project design samples.'
-						: `Press ${escTipIcon} to enter overview mode.`;
 			}
 
 			function getNavigationDirection(previousSlide, currentSlide) {
@@ -4838,12 +4915,42 @@ var zoom = (function(){
 			});
 
 			window.revealDeck = transposedDeck;
+			window.applyDirectionalDeckHash = (hash) => {
+				directionalDebug('applyDirectionalDeckHash', {
+					hash,
+					isMobileDeck,
+					isDualMode,
+					currentLogical: getLogicalIndices(),
+				});
+				if (typeof hash !== 'string' || !hash.startsWith('#/')) {
+					return;
+				}
+
+				if (isMobileDeck) {
+					applyMobileDeckHash(hash);
+					return;
+				}
+
+				const nextIndices = parseGroupedDeckHash(hash);
+				if (nextIndices) {
+					slideLogical(nextIndices.h, nextIndices.v, nextIndices.f || 0);
+				}
+			};
 			installGroupedHashModel();
 			if (!isDualMode && window.location.hash) {
 				Reveal.location?.readURL?.();
 			}
 			installTransposedOverviewHooks();
 			syncDirectionalRuntimeClasses();
+
+			function applyGroupedDeckHash(hash = window.location.hash) {
+				const nextIndices = parseGroupedDeckHash(hash);
+				if (!nextIndices) {
+					return;
+				}
+
+				slideLogical(nextIndices.h, nextIndices.v, nextIndices.f || 0);
+			}
 
 			if (!isDualMode) {
 				const revealElement = Reveal.getRevealElement();
@@ -4853,16 +4960,27 @@ var zoom = (function(){
 					revealElement.addEventListener('touchend', handleMobileTouchEnd, { passive: true });
 					revealElement.addEventListener('touchcancel', handleMobileTouchEnd, { passive: true });
 				}
-
-				window.addEventListener('hashchange', () => {
-					directionalDebug('window.hashchange', {
-						hash: window.location.hash,
-						currentLogical: getLogicalIndices(),
-					});
-					applyMobileDeckHash();
-				});
-				document.addEventListener('click', handleGroupedHashLinkClick, true);
 			}
+
+			window.addEventListener('hashchange', () => {
+				directionalDebug('window.hashchange', {
+					hash: window.location.hash,
+					currentLogical: getLogicalIndices(),
+					isMobileDeck,
+					isDualMode,
+				});
+
+				if (isMobileDeck) {
+					applyMobileDeckHash();
+					return;
+				}
+
+				if (isDualMode) {
+					applyGroupedDeckHash();
+				}
+			});
+			document.addEventListener('pointerdown', handleGroupedHashLinkActivation, true);
+			document.addEventListener('click', handleGroupedHashLinkActivation, true);
 
 			if (isDualMode) {
 				Reveal.on('ready', () => {
@@ -4951,7 +5069,6 @@ var zoom = (function(){
 					deckMode,
 				});
 				syncDirectionalRuntimeClasses();
-				updateHelperTip();
 				syncTransposedOverview();
 				requestAnimationFrame(() => {
 					syncManagedSlideVideos();
@@ -4959,7 +5076,6 @@ var zoom = (function(){
 			});
 			Reveal.on('overviewshown', () => {
 				syncDirectionalRuntimeClasses();
-				updateHelperTip();
 				requestAnimationFrame(() => {
 					syncTransposedOverview();
 					syncManagedSlideVideos();
@@ -4967,7 +5083,6 @@ var zoom = (function(){
 			});
 			Reveal.on('overviewhidden', () => {
 				syncDirectionalRuntimeClasses();
-				updateHelperTip();
 				requestAnimationFrame(() => {
 					syncManagedSlideVideos();
 				});
@@ -4990,7 +5105,6 @@ var zoom = (function(){
 					bumpControl(direction);
 				}
 
-				updateHelperTip();
 				syncTransposedOverview();
 				requestAnimationFrame(() => {
 					syncManagedSlideVideos();
@@ -5013,5 +5127,3 @@ var zoom = (function(){
 			window.addEventListener('scroll', syncManagedSlideVideos, { passive: true });
 			window.visualViewport?.addEventListener('scroll', syncManagedSlideVideos, { passive: true });
 			document.addEventListener('visibilitychange', syncManagedSlideVideos);
-
-			updateHelperTip();

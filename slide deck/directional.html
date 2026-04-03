@@ -19,6 +19,33 @@
 			type="image/x-icon"
 		/>
 
+		<script>
+			(() => {
+				const params = new URLSearchParams(window.location.search);
+				window.__AIRFOIL_LAYOUT_DEBUG__ = params.get('debugLayout') === '1';
+
+				if (params.get('debugVite') === '1') {
+					return;
+				}
+
+				const originalDebug = console.debug?.bind(console);
+				if (!originalDebug) {
+					return;
+				}
+
+				console.debug = (...args) => {
+					if (
+						typeof args[0] === 'string' &&
+						(args[0] === '[vite] connecting...' || args[0] === '[vite] connected.')
+					) {
+						return;
+					}
+
+					originalDebug(...args);
+				};
+			})();
+		</script>
+
 		<link rel="stylesheet" href="../dist/reset.css" />
 		<link rel="stylesheet" href="../dist/reveal.css" />
 		<link rel="stylesheet" href="../dist/theme/black.css" />
@@ -595,6 +622,10 @@
 			}
 
 			function logDirectionalLayoutMetrics(reason) {
+				if (!window.__AIRFOIL_LAYOUT_DEBUG__) {
+					return;
+				}
+
 				const html = document.documentElement;
 				const body = document.body;
 				const revealElement = Reveal.getRevealElement?.() || document.querySelector('.reveal');

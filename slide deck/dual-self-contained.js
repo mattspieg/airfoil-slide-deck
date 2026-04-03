@@ -410,9 +410,39 @@
 				history.replaceState(null, '', `${window.location.pathname}${window.location.search}${nextHash}`);
 			}
 
+			function applyHashToMobileChild(indices) {
+				const childWindow = normalFrame.contentWindow;
+				const applyHash = childWindow?.applyDirectionalDeckHash;
+				dualDebug('applyHashToMobileChild', {
+					indices,
+					hash: serializeDeckHash(indices),
+					hasChildWindow: !!childWindow,
+					hasApplyHash: typeof applyHash === 'function',
+					childHref: childWindow?.location?.href || null,
+				});
+				if (typeof applyHash !== 'function') {
+					return false;
+				}
+
+				hashState.applying = true;
+				applyHash(serializeDeckHash(indices));
+				requestAnimationFrame(() => {
+					hashState.applying = false;
+				});
+				return true;
+			}
+
 			function applyHashToDeck(deck, indices) {
 				if (!deck || !indices) {
 					dualDebug('applyHashToDeck:skip', { hasDeck: !!deck, indices });
+					return;
+				}
+
+				if (isMobileDeck && applyHashToMobileChild(indices)) {
+					dualDebug('applyHashToDeck:mobile-child-hash', {
+						hash: window.location.hash,
+						indices,
+					});
 					return;
 				}
 
