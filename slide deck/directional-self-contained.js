@@ -3786,8 +3786,6 @@ var zoom = (function(){
 			};
 			const groupedHashNavState = {
 				pendingHash: null,
-				pointerLink: null,
-				releaseTimer: null,
 			};
 			const directionalDebugPrefix = '[directional-self-contained]';
 			function formatDirectionalDebugDetail(detail) {
@@ -4260,23 +4258,8 @@ var zoom = (function(){
 					return;
 				}
 
-				if (event.type === 'click' && groupedHashNavState.pointerLink === link) {
-					groupedHashNavState.pointerLink = null;
-					return;
-				}
-
 				event.preventDefault();
 				event.stopImmediatePropagation();
-
-				if (event.type === 'pointerdown') {
-					groupedHashNavState.pointerLink = link;
-					window.clearTimeout(groupedHashNavState.releaseTimer);
-					groupedHashNavState.releaseTimer = window.setTimeout(() => {
-						if (groupedHashNavState.pointerLink === link) {
-							groupedHashNavState.pointerLink = null;
-						}
-					}, 500);
-				}
 
 				scheduleGroupedNavigation(link, href);
 			}
@@ -4979,7 +4962,6 @@ var zoom = (function(){
 					applyGroupedDeckHash();
 				}
 			});
-			document.addEventListener('pointerdown', handleGroupedHashLinkActivation, true);
 			document.addEventListener('click', handleGroupedHashLinkActivation, true);
 
 			if (isDualMode) {
