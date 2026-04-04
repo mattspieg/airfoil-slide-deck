@@ -206,7 +206,7 @@ class Ci {
       }), this.clearMediaPlaybackErrors();
     });
   }
-  logMediaDebug(e, t = {}) {
+  logMediaDebug() {
   }
   /**
    * Should the given element be preloaded?
@@ -3787,50 +3787,7 @@ var zoom = (function(){
 			const groupedHashNavState = {
 				pendingHash: null,
 			};
-			const directionalDebugPrefix = '[directional-self-contained]';
-			function formatDirectionalDebugDetail(detail) {
-				const directionalDebugSeenObjects = new WeakSet();
-
-				try {
-					return JSON.stringify(detail, (key, value) => {
-						if (value === Infinity) {
-							return 'Infinity';
-						}
-
-						if (value === -Infinity) {
-							return '-Infinity';
-						}
-
-						if (typeof value === 'number' && Number.isNaN(value)) {
-							return 'NaN';
-						}
-
-						if (value instanceof Error) {
-							return {
-								name: value.name,
-								message: value.message,
-								stack: value.stack,
-							};
-						}
-
-						if (value && typeof value === 'object') {
-							if (directionalDebugSeenObjects.has(value)) {
-								return '[Circular]';
-							}
-
-							directionalDebugSeenObjects.add(value);
-						}
-
-						return value;
-					});
-				}
-				catch (error) {
-					return JSON.stringify({
-						stringifyError: String(error),
-					});
-				}
-			}
-			function directionalDebug(message, detail) {
+			function directionalDebug() {
 				return;
 			}
 			const controlsRoot = () => document.querySelector('.deck_controls');
