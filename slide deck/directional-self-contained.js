@@ -2023,7 +2023,7 @@ class _i {
   }
   update() {
     const e = this.getLogicalRoutes(), t = this.Reveal.availableFragments(), i = this.getLogicalIndices(), s = this.getGroupLength(i.v), a = this.Reveal.isOverview(), n = this.Reveal.getConfig();
-    if ([
+    [
       [this.controlsLeft, e.left, t.prev, "previous slide in this group"],
       [this.controlsRight, e.right, t.next, "next slide in this group"],
       [this.controlsUp, e.up, !1, "previous group"],
@@ -2035,11 +2035,7 @@ class _i {
         const b = !!(u || p);
         g.classList.remove("enabled", "fragmented", "highlight"), g.setAttribute("aria-label", y), p && g.classList.add("fragmented"), b ? (g.classList.add("enabled"), g.removeAttribute("disabled")) : g.setAttribute("disabled", "disabled");
       });
-    }), n.controlsTutorial && !a) {
-      const c = this.Reveal.hasNavigatedVertically();
-      !this.Reveal.hasNavigatedHorizontally() && e.down ? this.controlsDownArrow.classList.add("highlight") : (this.controlsDownArrow.classList.remove("highlight"), !c && e.right && i.h === 0 && s > 1 ? this.controlsRightArrow.classList.add("highlight") : this.controlsRightArrow.classList.remove("highlight"));
-    } else
-      this.controlsLeftArrow.classList.remove("highlight"), this.controlsRightArrow.classList.remove("highlight"), this.controlsDownArrow.classList.remove("highlight");
+    }), this.controlsLeftArrow.classList.remove("highlight"), this.controlsRightArrow.classList.remove("highlight"), this.controlsDownArrow.classList.remove("highlight");
   }
   destroy() {
     this.unbind(), this.element.remove();
@@ -2643,7 +2639,7 @@ const ts = {
   minScale: 0.2,
   maxScale: 2,
   controls: !0,
-  controlsTutorial: !0,
+  controlsTutorial: !1,
   controlsLayout: "bottom-right",
   controlsBackArrows: "faded",
   progress: !0,
@@ -3996,8 +3992,64 @@ var zoom = (function(){
 				return resolvedFromDom || (slideElement ? toLogicalIndices(Reveal.getIndices(slideElement)) : toLogicalIndices(Reveal.getIndices()));
 			}
 
+			function isMonoDirectionalNormalMode() {
+				return isDualMode && !isOverviewDeck && !isOverviewActive();
+			}
+
+			function getNextLinearLogicalIndices(indices = getLogicalIndices()) {
+				if (indices.h < getGroupLength(indices.v) - 1) {
+					return {
+						h: indices.h + 1,
+						v: indices.v,
+						f: 0,
+					};
+				}
+
+				if (indices.v < groupSizes.length - 1) {
+					return {
+						h: 0,
+						v: indices.v + 1,
+						f: 0,
+					};
+				}
+
+				return null;
+			}
+
+			function getPreviousLinearLogicalIndices(indices = getLogicalIndices()) {
+				if (indices.h > 0) {
+					return {
+						h: indices.h - 1,
+						v: indices.v,
+						f: 0,
+					};
+				}
+
+				if (indices.v > 0) {
+					const previousGroup = indices.v - 1;
+					return {
+						h: getGroupLength(previousGroup) - 1,
+						v: previousGroup,
+						f: 0,
+					};
+				}
+
+				return null;
+			}
+
 			function getLogicalAvailableRoutes() {
 				const indices = getLogicalIndices();
+				if (isMonoDirectionalNormalMode()) {
+					const hasPrevious = !!getPreviousLinearLogicalIndices(indices);
+					const hasNext = !!getNextLinearLogicalIndices(indices);
+					return {
+						left: hasPrevious,
+						right: hasNext,
+						up: false,
+						down: false,
+					};
+				}
+
 				return {
 					left: indices.h > 0,
 					right: indices.h < getGroupLength(indices.v) - 1,
@@ -4227,6 +4279,26 @@ var zoom = (function(){
 
 				if (!overviewActive) {
 					logicalGroupProgress.set(indices.v, indices.h);
+				}
+
+				if (isMonoDirectionalNormalMode()) {
+					if (direction === 'left') {
+						const previousLinear = getPreviousLinearLogicalIndices(indices);
+						if (previousLinear) {
+							slideLogical(previousLinear.h, previousLinear.v, previousLinear.f);
+						}
+						return;
+					}
+
+					if (direction !== 'right') {
+						return;
+					}
+
+					const nextLinear = getNextLinearLogicalIndices(indices);
+					if (nextLinear) {
+						slideLogical(nextLinear.h, nextLinear.v, nextLinear.f);
+					}
+					return;
 				}
 
 				if (direction === 'left') {
@@ -4594,9 +4666,40 @@ var zoom = (function(){
 					return;
 				}
 
-				control.classList.remove('deck_control-bump');
-				void control.offsetWidth;
-				control.classList.add('deck_control-bump');
+				const keyframesByDirection = {
+					left: [
+						{ transform: 'translateX(0)' },
+						{ transform: 'translateX(-5px)' },
+						{ transform: 'translateX(2.5px)' },
+						{ transform: 'translateX(0)' },
+					],
+					right: [
+						{ transform: 'translateX(0)' },
+						{ transform: 'translateX(5px)' },
+						{ transform: 'translateX(-2.5px)' },
+						{ transform: 'translateX(0)' },
+					],
+					up: [
+						{ transform: 'translateY(0)' },
+						{ transform: 'translateY(-5px)' },
+						{ transform: 'translateY(2.5px)' },
+						{ transform: 'translateY(0)' },
+					],
+					down: [
+						{ transform: 'translateY(0)' },
+						{ transform: 'translateY(5px)' },
+						{ transform: 'translateY(-2.5px)' },
+						{ transform: 'translateY(0)' },
+					],
+				};
+				const keyframes = keyframesByDirection[direction];
+				if (keyframes && typeof control.animate === 'function') {
+					control.getAnimations?.().forEach((animation) => animation.cancel());
+					control.animate(keyframes, {
+						duration: 240,
+						easing: 'ease-out',
+					});
+				}
 			}
 
 			function getNavigationDirection(previousSlide, currentSlide) {
@@ -4607,12 +4710,12 @@ var zoom = (function(){
 				const previous = getLogicalIndices(previousSlide);
 				const current = getLogicalIndices(currentSlide);
 
-				if (current.h !== previous.h) {
-					return current.h > previous.h ? 'right' : 'left';
-				}
-
 				if (current.v !== previous.v) {
 					return current.v > previous.v ? 'down' : 'up';
+				}
+
+				if (current.h !== previous.h) {
+					return current.h > previous.h ? 'right' : 'left';
 				}
 
 				return null;
@@ -4778,7 +4881,7 @@ var zoom = (function(){
 			Reveal.initialize(isDualMode ? {
 				...revealCanvas,
 				hash: false,
-				controls: !isTouchDevice,
+				controls: isOverviewDeck && !isTouchDevice,
 				help: !isTouchDevice,
 				keyboard: keyboardBindings,
 				keyboardCondition: allowNonPauseKeyboardInput,

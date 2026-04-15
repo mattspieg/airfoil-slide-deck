@@ -62,7 +62,6 @@ html.reveal-full-page{width:100%;height:100%;height:100vh;height:calc(var(--vh, 
 .reveal .fragment.highlight-current-red.current-fragment{color:#ff2c2d}
 .reveal .fragment.highlight-current-green.current-fragment{color:#17ff2e}
 .reveal .fragment.highlight-current-blue.current-fragment{color:#1b91ff}
-.reveal:after{content:"";font-style:italic}
 .reveal iframe{z-index:1}
 .reveal a{position:relative}
 @keyframes bounce-right{0%,10%,25%,40%,50%{transform:translate(0)}20%{transform:translate(10px)}30%{transform:translate(-5px)}}
@@ -198,7 +197,9 @@ html.reveal-full-page{width:100%;height:100%;height:100vh;height:calc(var(--vh, 
 .reveal .slide-background[data-background-size=contain] video{object-fit:contain}
 .deck_view{opacity:0;transition:opacity .22s ease}
 .deck_view.deck-ready{opacity:1}
+.reveal.deck_view-mask-hidden:after{display:none}
 .wf-design-mode .deck_view{opacity:1!important}
+.wf-design-mode .reveal:after{display:none!important}
 .reveal[data-background-transition=none]>.backgrounds .slide-background:not([data-background-transition]),.reveal>.backgrounds .slide-background[data-background-transition=none]{transition:none}
 .reveal[data-background-transition=slide]>.backgrounds .slide-background:not([data-background-transition]),.reveal>.backgrounds .slide-background[data-background-transition=slide]{opacity:1}
 .reveal[data-background-transition=slide]>.backgrounds .slide-background.past:not([data-background-transition]),.reveal>.backgrounds .slide-background.past[data-background-transition=slide]{transform:translate(-100%)}

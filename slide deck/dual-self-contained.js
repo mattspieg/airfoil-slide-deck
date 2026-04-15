@@ -14,6 +14,10 @@
 			};
 			const helpGestureFrame = document.querySelector('.deck_help-preview-frame');
 			const helpGestureList = document.querySelector('.deck_help-tab-list');
+			const helpGesturePreview = document.querySelector('.deck_help-preview');
+			const helpGestureDemo = helpGesturePreview?.querySelector('.trackpad-demo');
+			const helpGestureTrack = helpGesturePreview?.querySelector('.trackpad-demo_gesture');
+			const helpGestureFingers = Array.from(helpGesturePreview?.querySelectorAll('.trackpad-demo_finger') || []).slice(0, 2);
 			const toolbar = document.querySelector('.deck_toolbar');
 			const isMobileDeck =
 				/(iphone|ipod|ipad|android)/gi.test(navigator.userAgent) ||
@@ -731,6 +735,125 @@
 				});
 
 				const gestureTabs = Array.from(helpGestureList.querySelectorAll('.deck_help-tab'));
+				const gesturePreviewBaseClasses = {
+					demo: 'trackpad-demo',
+					track: 'trackpad-demo_gesture',
+					finger: 'trackpad-demo_finger',
+				};
+				const inlineGestureConfigs = [
+					{
+						matches: ['previous-slide'],
+						ariaLabel: 'Trackpad swipe right animation',
+						demoClasses: ['is-swipe-right-gesture'],
+						trackClasses: [],
+						fingerClasses: [
+							['is-swipe-right-finger', 'is-top'],
+							['is-swipe-right-finger', 'is-bottom'],
+						],
+					},
+					{
+						matches: ['next-slide', 'trackpad-swipe-left'],
+						ariaLabel: 'Trackpad swipe left animation',
+						demoClasses: ['is-swipe-left'],
+						trackClasses: ['is-swipe-left-gesture'],
+						fingerClasses: [
+							['is-swipe-left-finger', 'is-top'],
+							['is-swipe-left-finger', 'is-bottom'],
+						],
+					},
+					{
+						matches: ['deck-overview', 'trackpad-pinch-in'],
+						ariaLabel: 'Trackpad pinch in animation',
+						demoClasses: ['is-pinch-in'],
+						trackClasses: [],
+						fingerClasses: [
+							['is-pinch-in-finger', 'is-a'],
+							['is-pinch-in-finger', 'is-b'],
+						],
+					},
+					{
+						matches: ['slide-focus', 'trackpad-pinch-out'],
+						ariaLabel: 'Trackpad pinch out animation',
+						demoClasses: ['is-pinch-out'],
+						trackClasses: [],
+						fingerClasses: [
+							['is-pinch-out-finger', 'is-a'],
+							['is-pinch-out-finger', 'is-b'],
+						],
+					},
+					{
+						matches: ['trackpad-gesture'],
+						ariaLabel: 'Trackpad swipe up animation',
+						demoClasses: ['is-swipe-up'],
+						trackClasses: [],
+						fingerClasses: [
+							['is-swipe-up-finger', 'is-left'],
+							['is-swipe-up-finger', 'is-right'],
+						],
+					},
+				];
+
+				function resolveInlineGestureConfig(gestureSrc) {
+				const normalized = String(gestureSrc || '').toLowerCase();
+				return inlineGestureConfigs.find((config) => config.matches.some((token) => normalized.includes(token))) || null;
+				}
+
+				function resetInlineGesturePreview() {
+				if (!helpGestureDemo || !helpGestureTrack || helpGestureFingers.length < 2) {
+					return false;
+				}
+
+				helpGestureDemo.className = gesturePreviewBaseClasses.demo;
+				helpGestureTrack.className = gesturePreviewBaseClasses.track;
+				helpGestureFingers.forEach((finger) => {
+					finger.className = gesturePreviewBaseClasses.finger;
+				});
+				return true;
+				}
+
+				function restartInlineGestureAnimations() {
+				if (!helpGesturePreview?.getAnimations) {
+					return;
+				}
+
+				void helpGesturePreview.offsetWidth;
+
+				helpGesturePreview.getAnimations({ subtree: true }).forEach((animation) => {
+					try {
+						animation.pause();
+						animation.currentTime = 0;
+						animation.play();
+					}
+					catch (error) {
+						// Ignore animations that cannot be manually controlled.
+					}
+				});
+				}
+
+				function applyInlineGesturePreview(gestureSrc) {
+				const config = resolveInlineGestureConfig(gestureSrc);
+				if (!config || !resetInlineGesturePreview()) {
+					return false;
+				}
+
+				if (config.demoClasses.length) {
+					helpGestureDemo.classList.add(...config.demoClasses);
+				}
+				if (config.trackClasses.length) {
+					helpGestureTrack.classList.add(...config.trackClasses);
+				}
+				helpGestureFingers.forEach((finger, index) => {
+					const classNames = config.fingerClasses[index] || [];
+					if (classNames.length) {
+						finger.classList.add(...classNames);
+					}
+				});
+				if (config.ariaLabel) {
+					helpGestureDemo.setAttribute('aria-label', config.ariaLabel);
+				}
+				restartInlineGestureAnimations();
+				return true;
+				}
 
 				function renderGestureProgress() {
 				const now = performance.now();
@@ -753,7 +876,10 @@
 					const bar = tab.querySelector('.deck_help-tab-progress-fill');
 					bar.style.width = tabIndex === index ? '0%' : '0%';
 				});
-				helpGestureFrame.src = gestureTabs[index].dataset.gestureSrc;
+				const gestureSrc = gestureTabs[index].dataset.gesture || gestureTabs[index].dataset.gestureSrc || '';
+				if (!applyInlineGesturePreview(gestureSrc) && helpGestureFrame) {
+					helpGestureFrame.src = gestureSrc;
+				}
 				}
 
 				function stopGestureTabs() {
