@@ -498,7 +498,7 @@
 				function showMobileScrollCta() {
 					const ctas = getMobileScrollCtas();
 					ctas.forEach((cta) => {
-						cta.style.setProperty('display', 'revert', 'important');
+						cta.style.setProperty('display', 'flex', 'important');
 						cta.style.setProperty('visibility', 'visible', 'important');
 						cta.style.setProperty('pointer-events', 'auto', 'important');
 						cta.style.setProperty('opacity', '1', 'important');
@@ -513,7 +513,7 @@
 					}
 
 					ctas.forEach((cta) => {
-						cta.style.setProperty('display', 'revert', 'important');
+						cta.style.setProperty('display', 'flex', 'important');
 						cta.style.setProperty('visibility', 'visible', 'important');
 						cta.style.setProperty('pointer-events', 'auto', 'important');
 						cta.style.setProperty('transition', 'opacity 0.5s ease', 'important');
