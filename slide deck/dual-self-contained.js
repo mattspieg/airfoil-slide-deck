@@ -477,6 +477,58 @@
 				});
 			}
 
+				function getMobileScrollCtas() {
+					if (!isMobileDeck) {
+						return [];
+					}
+
+					try {
+						return Array.from(
+							normalFrame.contentDocument?.querySelectorAll('[data-mobile-scroll-cta]') || []
+						);
+					}
+					catch (error) {
+						dualDebug('getMobileScrollCtas failed', {
+							error: String(error),
+						});
+						return [];
+					}
+				}
+
+				function showMobileScrollCta() {
+					const ctas = getMobileScrollCtas();
+					ctas.forEach((cta) => {
+						cta.style.setProperty('display', 'revert', 'important');
+						cta.style.setProperty('visibility', 'visible', 'important');
+						cta.style.setProperty('pointer-events', 'auto', 'important');
+						cta.style.setProperty('opacity', '1', 'important');
+						cta.style.setProperty('transition', 'opacity 0.5s ease', 'important');
+					});
+				}
+
+				function replayMobileScrollCtaFade() {
+					const ctas = getMobileScrollCtas();
+					if (!ctas.length) {
+						return;
+					}
+
+					ctas.forEach((cta) => {
+						cta.style.setProperty('display', 'revert', 'important');
+						cta.style.setProperty('visibility', 'visible', 'important');
+						cta.style.setProperty('pointer-events', 'auto', 'important');
+						cta.style.setProperty('transition', 'opacity 0.5s ease', 'important');
+						cta.style.setProperty('opacity', '0', 'important');
+					});
+
+					requestAnimationFrame(() => {
+						requestAnimationFrame(() => {
+							ctas.forEach((cta) => {
+								cta.style.setProperty('opacity', '1', 'important');
+							});
+						});
+					});
+				}
+
 				function bindMobileHashSync() {
 					if (!isMobileDeck || hashState.mobileBound) {
 						return;
@@ -497,6 +549,7 @@
 							initialHash,
 							frame: getFrameDebugState(normalFrame),
 						});
+						showMobileScrollCta();
 						if (initialHash) {
 							applyHashToDeck(deck, initialHash);
 						}
@@ -506,6 +559,7 @@
 				});
 
 				deck.on('slidechanged', () => {
+					replayMobileScrollCtaFade();
 					if (typeof deck.getIndices === 'function') {
 						replaceDeckHash(deck.getIndices());
 					}
@@ -527,9 +581,11 @@
 						dualDebug('mobile iframe load pre-bind', {
 							frame: getFrameDebugState(normalFrame),
 						});
+						showMobileScrollCta();
 						logMobileShellMetrics('mobile-iframe-load');
 						requestAnimationFrame(() => {
 							bindMobileHashSync();
+							showMobileScrollCta();
 							logMobileShellMetrics('mobile-iframe-load-raf');
 						});
 					}, { once: true });
