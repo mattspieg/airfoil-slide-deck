@@ -27,6 +27,10 @@
 				lastSerialized: null,
 				mobileBound: false,
 			};
+			const mobileScrollCtaState = {
+				shown: false,
+				dismissed: false,
+			};
 			function getMobileFrameSrc() {
 				const baseSrc =
 					normalFrame.getAttribute('src') ||
@@ -477,18 +481,16 @@
 				});
 			}
 
-				function getMobileScrollCtas() {
+				function ensureMobileScrollCta() {
 					if (!isMobileDeck) {
 						return [];
 					}
 
 					try {
-						return Array.from(
-							normalFrame.contentDocument?.querySelectorAll('[data-mobile-scroll-cta]') || []
-						);
+						return Array.from(document.querySelectorAll('[data-mobile-scroll-cta]'));
 					}
 					catch (error) {
-						dualDebug('getMobileScrollCtas failed', {
+						dualDebug('ensureMobileScrollCta failed', {
 							error: String(error),
 						});
 						return [];
@@ -496,19 +498,8 @@
 				}
 
 				function showMobileScrollCta() {
-					const ctas = getMobileScrollCtas();
-					ctas.forEach((cta) => {
-						cta.style.setProperty('display', 'flex', 'important');
-						cta.style.setProperty('visibility', 'visible', 'important');
-						cta.style.setProperty('pointer-events', 'auto', 'important');
-						cta.style.setProperty('opacity', '1', 'important');
-						cta.style.setProperty('transition', 'opacity 0.5s ease', 'important');
-					});
-				}
-
-				function replayMobileScrollCtaFade() {
-					const ctas = getMobileScrollCtas();
-					if (!ctas.length) {
+					const ctas = ensureMobileScrollCta();
+					if (mobileScrollCtaState.dismissed || mobileScrollCtaState.shown) {
 						return;
 					}
 
@@ -516,16 +507,57 @@
 						cta.style.setProperty('display', 'flex', 'important');
 						cta.style.setProperty('visibility', 'visible', 'important');
 						cta.style.setProperty('pointer-events', 'auto', 'important');
+						cta.style.removeProperty('opacity');
 						cta.style.setProperty('transition', 'opacity 0.5s ease', 'important');
-						cta.style.setProperty('opacity', '0', 'important');
 					});
+					mobileScrollCtaState.shown = ctas.length > 0;
+				}
 
-					requestAnimationFrame(() => {
-						requestAnimationFrame(() => {
-							ctas.forEach((cta) => {
-								cta.style.setProperty('opacity', '1', 'important');
-							});
+				function replayMobileScrollCtaFade() {
+					const ctas = ensureMobileScrollCta();
+					if (!ctas.length || !mobileScrollCtaState.shown || mobileScrollCtaState.dismissed) {
+						return;
+					}
+
+					mobileScrollCtaState.dismissed = true;
+					ctas.forEach((cta) => {
+						cta.getAnimations?.().forEach((animation) => {
+							try {
+								animation.cancel();
+							}
+							catch (error) {
+								dualDebug('replayMobileScrollCtaFade cancel failed', {
+									error: String(error),
+								});
+							}
 						});
+						cta.style.setProperty('display', 'flex', 'important');
+						cta.style.setProperty('visibility', 'visible', 'important');
+						cta.style.setProperty('pointer-events', 'none', 'important');
+						cta.style.setProperty('transition', 'none', 'important');
+						cta.style.setProperty('will-change', 'opacity', 'important');
+						cta.style.removeProperty('opacity');
+						void cta.offsetWidth;
+						const animation = cta.animate([
+							{ opacity: 1 },
+							{ opacity: 0 },
+						], {
+							duration: 300,
+							easing: 'ease',
+							fill: 'forwards',
+						});
+						animation.finished
+							.then(() => {
+								cta.style.setProperty('transition', 'none', 'important');
+								cta.style.setProperty('opacity', '0', 'important');
+								cta.style.setProperty('visibility', 'hidden', 'important');
+								cta.style.setProperty('display', 'none', 'important');
+							})
+							.catch((error) => {
+								dualDebug('replayMobileScrollCtaFade animation interrupted', {
+									error: String(error),
+								});
+							});
 					});
 				}
 
